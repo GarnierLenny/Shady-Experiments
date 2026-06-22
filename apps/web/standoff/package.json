@@ -1,0 +1,29 @@
+{
+  "name": "standoffduel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Real-time 1v1 western webcam duel. First to draw wins.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build:shared": "npm run build -w @standoffduel/shared",
+    "predev": "npm run build:shared",
+    "dev": "concurrently -n shared,api,web -c gray,cyan,magenta \"npm:dev:shared\" \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:shared": "npm run dev -w @standoffduel/shared",
+    "dev:api": "npm run dev -w @standoffduel/api",
+    "dev:web": "npm run dev -w @standoffduel/web",
+    "prebuild": "npm run build:shared",
+    "build": "npm run build -w @standoffduel/api && npm run build -w @standoffduel/web",
+    "start:api": "npm run start:prod -w @standoffduel/api",
+    "start:web": "npm run start -w @standoffduel/web",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
