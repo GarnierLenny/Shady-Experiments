@@ -42,7 +42,7 @@ export function Landing() {
 
   const go = (id: string, bo = false) => {
     if (name.trim()) localStorage.setItem('sd_name', name.trim().slice(0, 24));
-    router.push(bo ? `/lobby/${id}?bo=3` : `/lobby/${id}`);
+    router.push(bo ? `/standoff/lobby/${id}?bo=3` : `/standoff/lobby/${id}`);
   };
 
   const create = () => go(generateLobbyId(), bo3);
@@ -130,7 +130,7 @@ export function Landing() {
             </div>
             {joinErr && <p className="text-left text-sm text-rust">{joinErr}</p>}
 
-            <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-sand/70">
+            <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-sand/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
               <input
                 type="checkbox"
                 checked={bo3}
@@ -138,7 +138,7 @@ export function Landing() {
                 className="h-4 w-4 accent-ember"
               />
               Best of 3
-              <span className="text-sand/40">
+              <span className="text-sand/65">
                 (first to two draws takes the match)
               </span>
             </label>

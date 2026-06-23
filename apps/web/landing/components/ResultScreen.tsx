@@ -222,7 +222,7 @@ export function ResultScreen({
                     Next round
                   </Button>
                   <Link
-                    href="/"
+                    href="/standoff"
                     className="text-xs uppercase tracking-widest text-sand/60 hover:text-sand"
                   >
                     ← Leave the lobby
@@ -291,7 +291,7 @@ export function ResultScreen({
             {copied ? 'Link copied!' : 'Copy link'}
           </button>
           <Link
-            href="/"
+            href="/standoff"
             className="text-xs uppercase tracking-widest text-sand/60 hover:text-sand"
           >
             ← Leave the lobby

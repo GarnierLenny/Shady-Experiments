@@ -649,7 +649,7 @@ function Overlay({ children }: { children: React.ReactNode }) {
 function HomeLink() {
   return (
     <Link
-      href="/"
+      href="/standoff"
       className="mt-6 inline-block text-xs uppercase tracking-widest text-sand/50 hover:text-sand"
     >
       ← Back to town

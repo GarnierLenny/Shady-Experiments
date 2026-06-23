@@ -116,7 +116,7 @@ export default async function ResultPermalinkPage({ params }: { params: Params }
       )}
 
       <Link
-        href="/"
+        href="/standoff"
         className="mt-4 inline-flex items-center justify-center rounded-sm border-2 border-ember bg-ember px-8 py-4 font-impact text-xl uppercase tracking-wider text-night shadow-[0_4px_0_0_#7c1d12] transition hover:border-gold hover:bg-gold active:translate-y-px"
       >
         Duel someone →
