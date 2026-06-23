@@ -12,6 +12,11 @@ async function bootstrap(): Promise<void> {
       : true,
   });
 
+  // On Railway redeploys the container gets a SIGTERM; shutdown hooks let
+  // ResultsStore.onModuleDestroy close the Redis connection cleanly instead of
+  // leaving it dangling.
+  app.enableShutdownHooks();
+
   const port = process.env.PORT ? Number(process.env.PORT) : 3002;
   await app.listen(port);
   new Logger('Bootstrap').log(`ShadyExperiments API listening on :${port}`);
