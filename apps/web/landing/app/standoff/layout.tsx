@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 import { siteUrl } from '@/lib/site-url';
-import './globals.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -13,7 +12,7 @@ export const metadata: Metadata = {
     description: 'The fastest draw on the internet wins. Duel a friend over webcam.',
     type: 'website',
     siteName: 'StandoffDuel',
-    // og:image is supplied by the app/opengraph-image route.
+    // og:image is supplied by the app/standoff/opengraph-image route.
   },
   twitter: {
     card: 'summary_large_image',
@@ -29,29 +28,26 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({
+// Segment layout for the standoff experiment. The western look lives entirely
+// under `.standoff` (defined in globals.css) so it never touches the landing.
+// Fonts are loaded here; Next hoists these <link> tags into <head>.
+export default function StandoffLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin=""
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Rye&family=Special+Elite&family=Oswald:wght@500;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body>
+    <>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Rye&family=Special+Elite&family=Oswald:wght@500;700&display=swap"
+        rel="stylesheet"
+      />
+      <div className="standoff">
         <div style={{ position: 'relative', zIndex: 1 }}>{children}</div>
-        <Analytics />
-      </body>
-    </html>
+      </div>
+      <Analytics />
+    </>
   );
 }

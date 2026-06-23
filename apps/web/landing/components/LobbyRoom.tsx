@@ -393,7 +393,7 @@ export function LobbyRoom({
       {/* Camera blocked - hard stop. */}
       {camError && (
         <Overlay>
-          <h2 className="font-display text-3xl text-bone">Camera blocked</h2>
+          <h2 className="font-western text-3xl text-bone">Camera blocked</h2>
           <p className="mt-3 text-sand/70">
             StandoffDuel needs your webcam. Allow access in your browser and
             reload.
@@ -405,7 +405,7 @@ export function LobbyRoom({
       {/* Lobby rejected us. */}
       {!camError && duel.error && (
         <Overlay>
-          <h2 className="font-display text-3xl text-bone">
+          <h2 className="font-western text-3xl text-bone">
             {duel.error.code === 'lobby_full'
               ? 'That lobby is full'
               : duel.error.code === 'in_progress'
@@ -424,7 +424,7 @@ export function LobbyRoom({
         duel.players.length === 2 &&
         webrtc.status === 'failed' && (
           <Overlay>
-            <h2 className="font-display text-3xl text-bone">
+            <h2 className="font-western text-3xl text-bone">
               Can&apos;t reach your rival
             </h2>
             <p className="mt-3 max-w-sm text-sand/70">
@@ -741,7 +741,7 @@ function LobbyOverlay({
             <p className="font-impact text-xs uppercase tracking-[0.4em] text-ember">
               A challenger is missing
             </p>
-            <h2 className="mt-3 font-display text-4xl text-bone sm:text-5xl">
+            <h2 className="mt-3 font-western text-4xl text-bone sm:text-5xl">
               Send for your rival
             </h2>
             <div className="mt-6">
@@ -791,7 +791,7 @@ function LobbyOverlay({
     <div className="pointer-events-none absolute inset-0 z-20">
       {/* Top: saloon sign carrying the code */}
       <div className="pointer-events-auto absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-3 rounded-sm border-2 border-[#4a3a26] bg-night/85 px-4 py-2 backdrop-blur-sm">
-        <span className="font-display text-lg text-bone">High&nbsp;Noon</span>
+        <span className="font-western text-lg text-bone">High&nbsp;Noon</span>
         <span className="border-l border-[#4a3a26] pl-3 font-impact font-bold tracking-[0.2em] text-gold">
           {lobbyId}
         </span>
@@ -824,7 +824,7 @@ function LobbyOverlay({
 
       {/* VS on the dividing line */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2">
-        <span className="text-stroke font-display text-6xl text-ember drop-shadow-[0_6px_16px_rgba(0,0,0,0.6)] sm:text-7xl">
+        <span className="text-stroke font-western text-6xl text-ember drop-shadow-[0_6px_16px_rgba(0,0,0,0.6)] sm:text-7xl">
           VS
         </span>
       </div>
@@ -901,7 +901,7 @@ function Poster({
         style={{ width }}
       >
         <div
-          className="border-b-2 border-[#2a1f15] py-1 text-center font-display text-2xl leading-none text-[#241a11]"
+          className="border-b-2 border-[#2a1f15] py-1 text-center font-western text-2xl leading-none text-[#241a11]"
           style={paper}
         >
           Wanted
@@ -916,7 +916,7 @@ function Poster({
           className="border-t-2 border-[#2a1f15] px-2 py-1.5 text-center"
           style={paper}
         >
-          <div className="truncate font-display text-xl leading-none text-[#241a11]">
+          <div className="truncate font-western text-xl leading-none text-[#241a11]">
             {name}
           </div>
           <div className="mt-1 font-impact text-[10px] uppercase tracking-[0.3em] text-[#5a4327]">
@@ -948,7 +948,7 @@ function CodeTiles({ code }: { code: string }) {
         ch === '-' ? (
           <span
             key={i}
-            className="flex w-3 items-center justify-center font-display text-2xl text-sand/50"
+            className="flex w-3 items-center justify-center font-western text-2xl text-sand/50"
           >
             –
           </span>
@@ -975,7 +975,7 @@ function EmptySaddle({ vertical }: { vertical?: boolean }) {
         halfPos('right', vertical),
       )}
     >
-      <span className="font-display text-7xl text-sand/15">?</span>
+      <span className="font-western text-7xl text-sand/15">?</span>
       <span className="font-impact text-[11px] uppercase tracking-[0.35em] text-sand/25">
         Empty saddle
       </span>

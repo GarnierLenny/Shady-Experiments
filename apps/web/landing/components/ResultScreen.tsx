@@ -194,7 +194,7 @@ export function ResultScreen({
           <div className="flex flex-col items-center gap-6 text-center">
             <div className="flex items-end gap-8 sm:gap-12">
               <ScoreColumn label="You" value={myShown} accent={ticked && youScored} />
-              <span className="font-display pb-4 text-4xl text-sand/40 sm:text-5xl">
+              <span className="font-western pb-4 text-4xl text-sand/40 sm:text-5xl">
                 –
               </span>
               <ScoreColumn
@@ -207,7 +207,7 @@ export function ResultScreen({
               Best of {bestOf}
             </p>
             {ticked && matchOver && !isTie && (
-              <p className="animate-score-pop font-display text-3xl text-ember drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+              <p className="animate-score-pop font-western text-3xl text-ember drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
                 {youWon ? 'Match won' : 'Match over'}
               </p>
             )}
@@ -321,7 +321,7 @@ function ScoreColumn({
       <span
         key={value}
         className={cn(
-          'animate-score-pop font-display text-7xl leading-none drop-shadow-[0_3px_3px_rgba(0,0,0,0.85)] sm:text-8xl',
+          'animate-score-pop font-western text-7xl leading-none drop-shadow-[0_3px_3px_rgba(0,0,0,0.85)] sm:text-8xl',
           accent ? 'text-ember' : 'text-bone',
         )}
       >
@@ -380,7 +380,7 @@ function WantedPoster({
         <p className="font-impact mt-1 text-[10px] uppercase tracking-[0.35em]">
           Defender of the Peace
         </p>
-        <h2 className="font-display text-5xl leading-none">SHERIFF</h2>
+        <h2 className="font-western text-5xl leading-none">SHERIFF</h2>
 
         <Rule />
 
@@ -402,7 +402,7 @@ function WantedPoster({
           </div>
         </div>
 
-        <p className="font-display mt-3 break-words text-3xl leading-tight">
+        <p className="font-western mt-3 break-words text-3xl leading-tight">
           {name.toUpperCase()}
         </p>
         <p className="font-impact mt-1 text-xs uppercase tracking-widest">
@@ -454,7 +454,7 @@ function Newspaper({
           <span>★ Standoff Duel ★</span>
           <span>Two Cents</span>
         </div>
-        <h3 className="font-display py-1 text-center text-4xl leading-none">
+        <h3 className="font-western py-1 text-center text-4xl leading-none">
           The Frontier Gazette
         </h3>
         <div className="flex items-center justify-center gap-2 border-y-2 border-[#1c1208] py-0.5 text-[9px] uppercase tracking-[0.3em]">
@@ -490,7 +490,7 @@ function Newspaper({
           </figure>
           <div className="text-[12px] leading-snug">
             <p>
-              <span className="font-display float-left mr-1 text-4xl leading-[0.75]">
+              <span className="font-western float-left mr-1 text-4xl leading-[0.75]">
                 {line.charAt(0)}
               </span>
               {line.slice(1)}

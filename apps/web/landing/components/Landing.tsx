@@ -80,7 +80,7 @@ export function Landing() {
           <p className="font-impact text-sm uppercase tracking-[0.4em] text-ember">
             High noon, anywhere
           </p>
-          <h1 className="font-display mt-3 text-5xl leading-none text-bone sm:text-6xl lg:text-7xl">
+          <h1 className="font-western mt-3 text-5xl leading-none text-bone sm:text-6xl lg:text-7xl">
             Standoff
             <span className="block text-ember">Duel</span>
           </h1>
@@ -152,7 +152,7 @@ export function Landing() {
               className="border-b-2 border-[#2a1f15] py-2 text-center"
               style={PAPER}
             >
-              <div className="font-display text-4xl leading-none text-[#241a11]">
+              <div className="font-western text-4xl leading-none text-[#241a11]">
                 Wanted
               </div>
               <div className="mt-1 font-impact text-[11px] uppercase tracking-[0.34em] text-[#5a4327]">
@@ -190,7 +190,7 @@ export function Landing() {
               className="border-t-2 border-[#2a1f15] px-3 py-3 text-center"
               style={PAPER}
             >
-              <div className="truncate font-display text-2xl leading-none text-[#241a11]">
+              <div className="truncate font-western text-2xl leading-none text-[#241a11]">
                 {wantedName}
               </div>
               <div className="mt-1.5 font-impact text-[11px] uppercase tracking-[0.26em] text-[#5a4327]">

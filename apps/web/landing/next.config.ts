@@ -1,23 +1,29 @@
 import type { NextConfig } from "next";
 
-// Multi-Zones: the landing is the root zone. Each experiment is its own Next app
-// served under its own path. standoff lives under /standoff — we proxy those
-// requests to its zone. Realtime (socket.io / WebRTC) connects straight to the
-// central API, so only HTTP is rewritten here.
-const STANDOFF_ZONE_URL =
-  process.env.STANDOFF_ZONE_URL ?? "http://localhost:3003";
-
+// Single Next app: the landing (root) plus every experiment as a route subtree
+// (standoff lives under /standoff). No Multi-Zones proxy. Realtime (socket.io /
+// WebRTC) connects straight to the central API via NEXT_PUBLIC_SOCKET_URL.
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return {
-      beforeFiles: [
-        { source: "/standoff", destination: `${STANDOFF_ZONE_URL}/standoff` },
-        {
-          source: "/standoff/:path*",
-          destination: `${STANDOFF_ZONE_URL}/standoff/:path*`,
-        },
-      ],
+  // No ESLint config shipped; don't let it block production builds.
+  eslint: { ignoreDuringBuilds: true },
+  webpack: (config) => {
+    config.resolve = config.resolve || {};
+    config.resolve.fallback = {
+      ...(config.resolve.fallback || {}),
+      fs: false,
+      net: false,
+      tls: false,
     };
+    // simple-peer expects Node globals (Buffer/process) in the browser bundle.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const webpack = require("webpack");
+    config.plugins.push(
+      new webpack.ProvidePlugin({
+        Buffer: ["buffer", "Buffer"],
+        process: "process/browser",
+      }),
+    );
+    return config;
   },
 };
 

@@ -80,7 +80,7 @@ export default async function ResultPermalinkPage({ params }: { params: Params }
 
       {!rec ? (
         <>
-          <h1 className="font-display text-4xl text-bone sm:text-5xl">
+          <h1 className="font-western text-4xl text-bone sm:text-5xl">
             This duel rode off into the sunset
           </h1>
           <p className="max-w-md text-sand/70">
@@ -91,7 +91,7 @@ export default async function ResultPermalinkPage({ params }: { params: Params }
       ) : rec.isTie ? (
         <>
           <SheriffStar />
-          <h1 className="font-display text-4xl text-bone sm:text-5xl">
+          <h1 className="font-western text-4xl text-bone sm:text-5xl">
             No blood spilled
           </h1>
           <p className="font-impact uppercase tracking-widest text-sand/70">
@@ -101,7 +101,7 @@ export default async function ResultPermalinkPage({ params }: { params: Params }
       ) : (
         <>
           <SheriffStar />
-          <h1 className="font-display break-words text-5xl text-ember sm:text-6xl">
+          <h1 className="font-western break-words text-5xl text-ember sm:text-6xl">
             {rec.winnerName ?? 'The Stranger'}
           </h1>
           <p className="font-impact uppercase tracking-widest text-sand/70">
