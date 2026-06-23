@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# build output / artifacts
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# env files
+.env
+.env*.local
+
+# logs
+*-debug.log*
+npm-debug.log*
+yarn-error.log*
+
+# editor / OS
+.DS_Store
+*.pem
+
+# deploy
+.vercel
