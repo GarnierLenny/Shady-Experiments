@@ -1,0 +1,26 @@
+{
+  "name": "shadyexperiments",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ShadyExperiments — a collection of social experiments. One central API, experiments served as Multi-Zones.",
+  "workspaces": [
+    "packages/*",
+    "apps/api",
+    "apps/web/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build:shared": "npm run build -w @shadyexperiments/shared",
+    "predev": "npm run build:shared",
+    "dev": "concurrently -n shared,api,landing,standoff -c gray,cyan,blue,yellow \"npm:dev:shared\" \"npm:dev:api\" \"npm:dev:landing\" \"npm:dev:standoff\"",
+    "dev:shared": "npm run dev -w @shadyexperiments/shared",
+    "dev:api": "npm run dev -w @shadyexperiments/api",
+    "dev:landing": "npm run dev -w landing",
+    "dev:standoff": "npm run dev -w @shadyexperiments/standoff"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
