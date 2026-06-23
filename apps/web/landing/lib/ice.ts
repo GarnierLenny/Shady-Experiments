@@ -9,6 +9,10 @@
  *
  * TURN is env-driven so the public build ships with STUN-only and a deploy can
  * plug in credentials (metered.ca, Twilio NTS, self-hosted coturn, ...).
+ *
+ * Production provisions metered.ca relays via NEXT_PUBLIC_TURN_* on Vercel.
+ * Note: these are inlined at BUILD time, so changing them requires a fresh
+ * production build (a redeploy without build cache, or a commit touching this app).
  */
 export interface IceServer {
   urls: string | string[];
