@@ -808,20 +808,6 @@ function LobbyOverlay({
         )}
       </div>
 
-      {/* Wanted posters facing off across the line */}
-      <Poster
-        side="left"
-        vertical={vertical}
-        name={selfName}
-        state={meReady ? 'armed' : 'idle'}
-      />
-      <Poster
-        side="right"
-        vertical={vertical}
-        name={oppName ?? 'Rival'}
-        state={oppReady ? 'armed' : 'pending'}
-      />
-
       {/* VS on the dividing line */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2">
         <span className="text-stroke font-western text-6xl text-ember drop-shadow-[0_6px_16px_rgba(0,0,0,0.6)] sm:text-7xl">
@@ -857,7 +843,7 @@ function LobbyOverlay({
 }
 
 /** Half of the screen a player owns: left/right in landscape, top/bottom stacked
- *  in portrait. Mirrors the webcam layout so posters land over the right face. */
+ *  in portrait. Mirrors the webcam layout so an overlay lands over the right face. */
 function halfPos(side: 'left' | 'right', vertical?: boolean) {
   if (vertical) {
     return side === 'left'
