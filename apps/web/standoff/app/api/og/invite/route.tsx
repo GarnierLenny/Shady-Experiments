@@ -123,7 +123,7 @@ export async function GET(req: Request) {
         <div
           style={{ display: 'flex', fontFamily: 'Rye', fontSize: 30, color: C.ember, marginTop: 40 }}
         >
-          Draw first — or get drawn on
+          Draw first or get drawn on
         </div>
       </div>
     ),

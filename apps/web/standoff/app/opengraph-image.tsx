@@ -3,7 +3,7 @@ import { OG_SIZE, C, OG_BACKGROUND, loadOgFonts, Star } from '@/lib/og';
 
 export const size = OG_SIZE;
 export const contentType = 'image/png';
-export const alt = 'StandoffDuel - the webcam western duel';
+export const alt = 'StandoffDuel, the webcam western duel';
 
 // The link preview card. Without this, pasting standoffduel anywhere renders a
 // naked link - the single highest-leverage fix for a "built to be shared" app.

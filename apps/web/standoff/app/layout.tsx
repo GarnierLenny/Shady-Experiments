@@ -5,7 +5,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: 'StandoffDuel - the webcam western duel',
+  title: 'StandoffDuel, the webcam western duel',
   description:
     'Two players, two webcams, one draw. Stare your opponent down and be the fastest gun on the internet.',
   openGraph: {

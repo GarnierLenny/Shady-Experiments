@@ -381,7 +381,7 @@ function drawNewspaper(
   );
   ctx.font = 'italic 12px Georgia, serif';
   ctx.fillStyle = 'rgba(28,18,8,0.7)';
-  ctx.fillText('- Filed by the wire, High Noon', tx, ppy + ph - 4);
+  ctx.fillText('Filed by the wire, High Noon', tx, ppy + ph - 4);
   ctx.restore();
 }
 

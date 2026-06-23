@@ -43,7 +43,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const rec = await getRecord(pick(id));
-  if (!rec) return { title: 'StandoffDuel - result not found' };
+  if (!rec) return { title: 'StandoffDuel, result not found' };
 
   const title = rec.isTie
     ? 'A dead-even standoff · StandoffDuel'

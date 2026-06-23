@@ -33,7 +33,7 @@ function loserHeadline(reason: DuelResult['reason'], falseStart: boolean) {
 
 function loserLine(reaction: ReactionOutcome | undefined, reason: DuelResult['reason']) {
   if (reaction?.falseStart || reason === 'false_start')
-    return 'Slapped leather before the call - and paid dearly for the discourtesy.';
+    return 'Slapped leather before the call, and paid dearly for the discourtesy.';
   if (reason === 'opponent_left')
     return 'Last seen riding hard for the county line, dust trailing behind.';
   if (reaction?.ms != null)
@@ -72,7 +72,7 @@ export function ResultScreen({
 
   const banner = !matchOver
     ? isTie
-      ? 'A standoff — replay the round'
+      ? 'A standoff. Replay the round'
       : youWon
         ? 'Round to you'
         : 'Round to your rival'
@@ -150,7 +150,7 @@ export function ResultScreen({
       await shareOrDownload(
         blob,
         `standoffduel-${lobbyId}.png`,
-        `${winnerName} is the fastest gun in our StandoffDuel - think you're faster? ${permalink()}`,
+        `${winnerName} is the fastest gun in our StandoffDuel. Think you're faster? ${permalink()}`,
       );
     } finally {
       setSharing(false);
@@ -172,9 +172,9 @@ export function ResultScreen({
 
   const tweet = () => {
     const text = youWon
-      ? `I out-drew ${loserName} in ${result.reactionMs ?? '—'}ms on StandoffDuel 🤠🔫 Think you're faster?`
+      ? `I out-drew ${loserName}${result.reactionMs ? ` in ${result.reactionMs}ms` : ''} on StandoffDuel 🤠🔫 Think you're faster?`
       : isTie
-        ? `Nobody flinched - a dead-even standoff on StandoffDuel 🤠🔫 Come settle it.`
+        ? `Nobody flinched, a dead-even standoff on StandoffDuel 🤠🔫 Come settle it.`
         : `${winnerName} just out-drew me on StandoffDuel 🤠🔫 Avenge me?`;
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
       text,
@@ -251,7 +251,7 @@ export function ResultScreen({
             name="THE STREET"
             photo={winnerPhoto ?? loserPhoto}
             headline="NO BLOOD SPILLED"
-            line="Two guns, two cowards - neither cleared leather before the bell tolled."
+            line="Two guns, two cowards, neither cleared leather before the bell tolled."
           />
         ) : (
           <div className="grid w-full items-start gap-8 md:grid-cols-2">
@@ -414,7 +414,7 @@ function WantedPoster({
         <p className="font-impact uppercase tracking-wider">
           Drew in{' '}
           <span className="text-2xl">
-            {reactionMs != null ? `${reactionMs} ms` : '-'}
+            {reactionMs != null ? `${reactionMs} ms` : 'a blur'}
           </span>
         </p>
         <p className="mt-2 text-[9px] uppercase tracking-[0.3em] opacity-70">
@@ -500,7 +500,7 @@ function Newspaper({
               in the dust.
             </p>
             <p className="mt-2 text-[9px] uppercase tracking-widest opacity-60">
-              - Filed by the wire, High Noon
+              Filed by the wire, High Noon
             </p>
           </div>
         </div>

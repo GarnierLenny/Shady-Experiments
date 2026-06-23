@@ -468,6 +468,7 @@ export function LobbyRoom({
             bestOf={duel.bestOf}
             myWins={myWins}
             oppWins={oppWins}
+            vertical={vertical}
           />
         )}
 
@@ -482,7 +483,7 @@ export function LobbyRoom({
             Draw!
           </span>
           <span className="text-stroke font-impact text-sm uppercase tracking-widest text-bone/90">
-            Rip your hand off your hip - or tap / press SPACE
+            Rip your hand off your hip, or tap / press SPACE
           </span>
         </button>
       )}
@@ -669,6 +670,7 @@ function LobbyOverlay({
   bestOf,
   myWins,
   oppWins,
+  vertical,
 }: {
   lobbyId: string;
   selfName: string;
@@ -682,128 +684,301 @@ function LobbyOverlay({
   bestOf: number;
   myWins: number;
   oppWins: number;
+  vertical?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
 
+  // Tag the link with the sharer's name so the preview reads
+  // "<name> challenges you to a duel" when it lands in a chat. Keep existing
+  // params (e.g. ?bo=3) so the match mode survives if the invitee's socket
+  // happens to create the lobby first.
+  const buildUrl = () => {
+    const url = new URL(window.location.href);
+    if (selfName && selfName !== 'Stranger') url.searchParams.set('by', selfName);
+    return url.toString();
+  };
   const copy = async () => {
     try {
-      // Tag the link with the sharer's name so the preview reads
-      // "<name> challenges you to a duel" when it lands in a chat. Keep existing
-      // params (e.g. ?bo=3) so the match mode survives if the invitee's socket
-      // happens to create the lobby first.
-      const url = new URL(window.location.href);
-      if (selfName && selfName !== 'Stranger') url.searchParams.set('by', selfName);
-      await navigator.clipboard.writeText(url.toString());
+      await navigator.clipboard.writeText(buildUrl());
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      /* clipboard blocked - the code is shown anyway */
+      /* clipboard blocked, the code is shown anyway */
     }
   };
+  // The empty lobby's whole job is recruiting a rival, so hand them the native
+  // share sheet on mobile, fall back to clipboard everywhere else.
+  const share = async () => {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Standoff Duel',
+          text: `${selfName} challenges you to a duel`,
+          url: buildUrl(),
+        });
+        return;
+      } catch {
+        /* share cancelled, leave it */
+      }
+      return;
+    }
+    copy();
+  };
+
+  // ── Waiting room: the whole screen sells the invite. ──
+  if (!bothPresent) {
+    return (
+      <div className="pointer-events-none absolute inset-0 z-20">
+        <EmptySaddle vertical={vertical} />
+        <div className="absolute inset-0 flex items-center justify-center px-6">
+          <div
+            className="pointer-events-auto flex max-w-xl flex-col items-center px-10 py-9 text-center"
+            style={{
+              background:
+                'radial-gradient(closest-side, rgba(12,10,9,.94), rgba(12,10,9,.5) 72%, transparent)',
+            }}
+          >
+            <p className="font-impact text-xs uppercase tracking-[0.4em] text-ember">
+              A challenger is missing
+            </p>
+            <h2 className="mt-3 font-display text-4xl text-bone sm:text-5xl">
+              Send for your rival
+            </h2>
+            <div className="mt-6">
+              <CodeTiles code={lobbyId} />
+            </div>
+            <Button size="lg" onClick={share} className="mt-7">
+              Send the challenge link
+            </Button>
+            <p className="mt-4 text-sm text-sand/60">
+              {copied ? (
+                <span className="text-gold">Link copied. Send it over!</span>
+              ) : (
+                <>
+                  or read out the code{' '}
+                  <button
+                    onClick={copy}
+                    className="font-impact tracking-widest text-bone underline-offset-2 hover:underline"
+                  >
+                    {lobbyId}
+                  </button>{' '}
+                  · waiting for someone to ride in…
+                </>
+              )}
+            </p>
+            {bestOf > 1 && (
+              <p className="mt-3 font-impact text-xs uppercase tracking-widest text-gold/80">
+                Best of {bestOf}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Both in the street: the face-off is the hero. ──
+  const status =
+    meReady && oppReady
+      ? { text: 'Both armed. Draw incoming…', cls: 'text-gold' }
+      : meReady
+        ? { text: 'Waiting on your rival…', cls: 'text-gold' }
+        : holstered
+          ? { text: `Locked in and ready${pistol ? ' 🔫' : ''}`, cls: 'text-green-400' }
+          : { text: 'Hold a hand steady on your hip', cls: 'text-sand' };
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-between p-6">
-      {/* Top: code + share */}
-      <div className="pointer-events-auto flex items-center gap-3 rounded-sm border-2 border-dust bg-night/70 px-4 py-2 backdrop-blur-sm">
-        <span className="font-impact text-xs uppercase tracking-widest text-sand/60">
-          Lobby
-        </span>
-        <span className="font-impact text-xl tracking-widest text-bone">
+    <div className="pointer-events-none absolute inset-0 z-20">
+      {/* Top: saloon sign carrying the code */}
+      <div className="pointer-events-auto absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-3 rounded-sm border-2 border-[#4a3a26] bg-night/85 px-4 py-2 backdrop-blur-sm">
+        <span className="font-display text-lg text-bone">High&nbsp;Noon</span>
+        <span className="border-l border-[#4a3a26] pl-3 font-impact font-bold tracking-[0.2em] text-gold">
           {lobbyId}
         </span>
-        {bestOf > 1 && (
-          <span className="rounded-sm border border-gold/60 px-2 py-1 font-impact text-xs uppercase tracking-widest text-gold">
-            Best of {bestOf} · {myWins}–{oppWins}
-          </span>
-        )}
         <button
           onClick={copy}
-          className="ml-1 rounded-sm border border-dust px-2 py-1 text-xs uppercase tracking-widest text-sand/70 hover:border-ember hover:text-ember"
+          className="font-impact text-[11px] uppercase tracking-widest text-sand/55 hover:text-ember"
         >
           {copied ? 'Copied!' : 'Copy link'}
         </button>
+        {bestOf > 1 && (
+          <span className="rounded-sm border border-gold/50 px-2 py-0.5 font-impact text-[11px] uppercase tracking-widest text-gold">
+            BO{bestOf} · {myWins}–{oppWins}
+          </span>
+        )}
       </div>
 
-      {/* Bottom: readiness + action */}
-      <div className="pointer-events-auto w-full max-w-md rounded-sm border-2 border-dust bg-night/75 p-5 text-center backdrop-blur-sm">
-        <div className="mb-4 flex items-center justify-center gap-4">
-          <PlayerChip label="You" ready={meReady} present />
-          <span className="font-display text-2xl text-ember">vs</span>
-          <PlayerChip
-            label={oppName ?? 'Waiting…'}
-            ready={oppReady}
-            present={bothPresent}
-          />
-        </div>
+      {/* Wanted posters facing off across the line */}
+      <Poster
+        side="left"
+        vertical={vertical}
+        name={selfName}
+        state={meReady ? 'armed' : 'idle'}
+      />
+      <Poster
+        side="right"
+        vertical={vertical}
+        name={oppName ?? 'Rival'}
+        state={oppReady ? 'armed' : 'pending'}
+      />
 
-        {!bothPresent ? (
-          <p className="text-sm text-sand/70">
-            Share the code{' '}
-            <span className="font-impact text-bone">{lobbyId}</span> with a
-            friend to begin.
-          </p>
-        ) : meReady ? (
-          <p className="font-impact uppercase tracking-widest text-gold">
-            {oppReady ? 'Both armed - draw incoming…' : 'Waiting on your rival…'}
-          </p>
-        ) : (
-          <>
-            <p
-              className={cn(
-                'font-impact uppercase tracking-widest transition-colors',
-                holstered ? 'text-green-400' : 'text-sand/70',
-              )}
-            >
-              {holstered
-                ? `Locked in - ready${pistol ? ' 🔫' : ''}`
-                : '🤠 Hold a hand steady on your hip'}
-            </p>
-            <p className="mt-1 text-xs text-sand/50">
-              Keep it still - the ring fills as you hold.
-            </p>
-            <button
-              onClick={onManualReady}
-              className="mt-3 text-xs uppercase tracking-widest text-sand/50 underline hover:text-sand"
-            >
-              camera can’t see you? ready manually
-            </button>
-          </>
+      {/* VS on the dividing line */}
+      <div className="pointer-events-none absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2">
+        <span className="text-stroke font-display text-6xl text-ember drop-shadow-[0_6px_16px_rgba(0,0,0,0.6)] sm:text-7xl">
+          VS
+        </span>
+      </div>
+
+      {/* Bottom: readiness + how to draw */}
+      <div className="pointer-events-auto absolute bottom-6 left-1/2 w-full max-w-md -translate-x-1/2 px-6 text-center">
+        <p
+          className={cn(
+            'text-stroke font-impact text-lg uppercase tracking-[0.18em]',
+            status.cls,
+          )}
+        >
+          {status.text}
+        </p>
+        {!meReady && (
+          <button
+            onClick={onManualReady}
+            className="mt-1 font-impact text-[11px] uppercase tracking-widest text-sand/50 underline hover:text-sand"
+          >
+            camera can’t see you? ready manually
+          </button>
         )}
-
-        <p className="mt-4 border-t border-dust/50 pt-3 text-xs leading-relaxed text-sand/60">
-          At the <span className="font-impact text-ember">DRAW</span> flash,{' '}
-          <span className="text-bone">rip your hand off your hip</span> to fire -
-          or tap anywhere / press{' '}
-          <span className="font-impact text-bone">SPACE</span>.
+        <p className="text-stroke mt-3 font-impact text-[11px] uppercase tracking-[0.15em] text-sand/55">
+          At the <span className="text-ember">Draw</span> flash, rip your hand off
+          your hip, or tap / press <span className="text-bone">Space</span>
         </p>
       </div>
     </div>
   );
 }
 
-function PlayerChip({
-  label,
-  ready,
-  present,
+/** Half of the screen a player owns: left/right in landscape, top/bottom stacked
+ *  in portrait. Mirrors the webcam layout so posters land over the right face. */
+function halfPos(side: 'left' | 'right', vertical?: boolean) {
+  if (vertical) {
+    return side === 'left'
+      ? 'left-0 top-0 h-1/2 w-full'
+      : 'bottom-0 left-0 h-1/2 w-full';
+  }
+  return side === 'left'
+    ? 'left-0 top-0 h-full w-1/2'
+    : 'right-0 top-0 h-full w-1/2';
+}
+
+/** A WANTED placard framing the live face behind it; stamped when armed. */
+function Poster({
+  side,
+  vertical,
+  name,
+  state,
 }: {
-  label: string;
-  ready: boolean;
-  present: boolean;
+  side: 'left' | 'right';
+  vertical?: boolean;
+  name: string;
+  state: 'armed' | 'pending' | 'idle';
 }) {
+  // Drive width off the viewport so the poster always fits its half.
+  const width = vertical ? 'min(58vw, 220px)' : 'min(34vw, 260px)';
+  const paper = {
+    background: 'linear-gradient(160deg,#ece0c2,#cdba8f)',
+  } as const;
   return (
     <div
       className={cn(
-        'min-w-28 rounded-sm border-2 px-4 py-2',
-        ready ? 'border-green-500 bg-green-500/10' : 'border-dust bg-charcoal/50',
-        present ? '' : 'opacity-50',
+        'pointer-events-none absolute z-20 flex items-center justify-center',
+        halfPos(side, vertical),
       )}
     >
-      <p className="truncate font-impact uppercase tracking-wider text-bone">
-        {label}
-      </p>
-      <p className="text-xs uppercase tracking-widest text-sand/60">
-        {ready ? 'Armed' : present ? 'Not ready' : 'Empty'}
-      </p>
+      <div
+        className={cn(
+          'relative flex flex-col border-2 border-[#2a1f15] shadow-[0_16px_40px_rgba(0,0,0,0.55)]',
+          side === 'left' ? '-rotate-2' : 'rotate-2',
+        )}
+        style={{ width }}
+      >
+        <div
+          className="border-b-2 border-[#2a1f15] py-1 text-center font-display text-2xl leading-none text-[#241a11]"
+          style={paper}
+        >
+          Wanted
+        </div>
+        {/* Transparent window: the live webcam shows through, matted in paper. */}
+        <div className="flex">
+          <div className="w-2.5 border-r-2 border-[#2a1f15]" style={paper} />
+          <div className="flex-1" style={{ aspectRatio: '4 / 5' }} />
+          <div className="w-2.5 border-l-2 border-[#2a1f15]" style={paper} />
+        </div>
+        <div
+          className="border-t-2 border-[#2a1f15] px-2 py-1.5 text-center"
+          style={paper}
+        >
+          <div className="truncate font-display text-xl leading-none text-[#241a11]">
+            {name}
+          </div>
+          <div className="mt-1 font-impact text-[10px] uppercase tracking-[0.3em] text-[#5a4327]">
+            Dead or Alive
+          </div>
+        </div>
+        {state !== 'idle' && (
+          <span
+            className={cn(
+              'absolute bottom-[14%] left-1/2 -translate-x-1/2 -rotate-12 whitespace-nowrap rounded border-4 px-3 py-0.5 font-impact font-bold uppercase tracking-wider',
+              state === 'armed'
+                ? 'border-green-500 text-2xl text-green-500'
+                : 'border-dashed border-gold/80 text-lg text-gold',
+            )}
+          >
+            {state === 'armed' ? 'Armed' : 'Ready?'}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** The lobby code as hand-carved tiles, the headline of the empty lobby. */
+function CodeTiles({ code }: { code: string }) {
+  return (
+    <div className="flex flex-wrap justify-center gap-1.5">
+      {code.split('').map((ch, i) =>
+        ch === '-' ? (
+          <span
+            key={i}
+            className="flex w-3 items-center justify-center font-display text-2xl text-sand/50"
+          >
+            –
+          </span>
+        ) : (
+          <span
+            key={i}
+            className="flex h-12 w-9 items-center justify-center rounded-sm border-2 border-[#2a1f15] font-impact text-2xl font-bold text-[#241a11] shadow-[0_5px_12px_rgba(0,0,0,0.5)] sm:h-14 sm:w-11 sm:text-3xl"
+            style={{ background: 'linear-gradient(#efe4c7,#d3c098)' }}
+          >
+            {ch.toUpperCase()}
+          </span>
+        ),
+      )}
+    </div>
+  );
+}
+
+/** The empty rival half reads as a seat waiting to be filled. */
+function EmptySaddle({ vertical }: { vertical?: boolean }) {
+  return (
+    <div
+      className={cn(
+        'pointer-events-none absolute z-10 flex flex-col items-center justify-center gap-2',
+        halfPos('right', vertical),
+      )}
+    >
+      <span className="font-display text-7xl text-sand/15">?</span>
+      <span className="font-impact text-[11px] uppercase tracking-[0.35em] text-sand/25">
+        Empty saddle
+      </span>
     </div>
   );
 }

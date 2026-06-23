@@ -3,9 +3,10 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Multi-Zones: this experiment is mounted under /standoff on the SE domain.
-  // basePath rebases routes; assetPrefix makes _next assets load from /standoff.
+  // basePath alone rebases both routes AND _next assets under /standoff. Do NOT
+  // also set assetPrefix (it double-handles the publicPath and breaks dev chunk
+  // loading: "Cannot read properties of undefined (reading 'call')").
   basePath: '/standoff',
-  assetPrefix: '/standoff',
   // No ESLint config shipped; don't let it block production builds.
   eslint: { ignoreDuringBuilds: true },
   webpack: (config) => {
