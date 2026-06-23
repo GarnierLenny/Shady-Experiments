@@ -13,7 +13,7 @@ export function ExperimentDossier() {
 
       <div className="flex items-baseline justify-between gap-4 pt-6">
         <h1 className="font-display text-[28px] font-bold leading-none tracking-tight text-ink">
-          EYETOEYE
+          STANDOFF
         </h1>
         <span className="flex shrink-0 items-center gap-2 text-[11px] tracking-[0.15em] text-ink">
           <span className="dot-live" aria-hidden="true" />

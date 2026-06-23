@@ -1,20 +1,26 @@
-// EyeToEye (the "standoff" game) is a separate full-stack app, not a React
-// component that can be imported here. We embed it as an iframe when a URL is
-// configured, otherwise we show an in-brand launch panel.
+// STANDOFF is a separate full-stack app (Next web + NestJS API + WebRTC/socket.io),
+// not a React component we can import. We embed its web app as an iframe.
 //
-// Set NEXT_PUBLIC_EYETOEYE_URL to the deployed game (or its dev server, e.g.
-// http://localhost:3000) to embed it inline.
-const GAME_URL = process.env.NEXT_PUBLIC_EYETOEYE_URL;
+//   • dev:  defaults to http://localhost:3003 (standoff's `next dev` port), so it
+//           shows up automatically once you run standoff's own `npm run dev`.
+//   • prod: set NEXT_PUBLIC_STANDOFF_URL to the deployed game; otherwise we show
+//           the in-brand "en attente de connexion" panel instead of a dead frame.
+//
+// The game also needs its API running (socket.io on :3002) for an actual duel —
+// standoff's `npm run dev` starts shared + api + web together.
+const STANDOFF_URL =
+  process.env.NEXT_PUBLIC_STANDOFF_URL ??
+  (process.env.NODE_ENV !== "production" ? "http://localhost:3003" : undefined);
 
 export function GameFrame() {
   return (
     <section id="experience" className="mx-auto w-full max-w-3xl px-6 py-12">
-      {GAME_URL ? (
+      {STANDOFF_URL ? (
         <iframe
-          src={GAME_URL}
-          title="EYETOEYE"
+          src={STANDOFF_URL}
+          title="STANDOFF"
           allow="camera; microphone; fullscreen"
-          className="h-[70vh] w-full border-[0.5px] border-rule"
+          className="h-[80vh] w-full border-[0.5px] border-rule bg-paper"
         />
       ) : (
         <LaunchPanel />
@@ -26,9 +32,7 @@ export function GameFrame() {
 function LaunchPanel() {
   return (
     <div className="flex flex-col items-center gap-4 border-[0.5px] border-rule px-6 py-20 text-center">
-      <p className="text-[11px] tracking-[0.15em] text-muted">
-        DISPOSITIF EYETOEYE
-      </p>
+      <p className="text-[11px] tracking-[0.15em] text-muted">DISPOSITIF STANDOFF</p>
       <p className="max-w-sm text-[13px] text-ink">
         Le protocole se d&eacute;roule en direct, entre deux sujets. L&apos;acc&egrave;s
         requiert une cam&eacute;ra.

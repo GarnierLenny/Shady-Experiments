@@ -55,7 +55,7 @@ export default function Home() {
       <div className="flex justify-center px-6 pb-10">
         {done && (
           <Link
-            href="/eyetoeye"
+            href="/standoff"
             className="reveal text-[13px] text-muted transition-colors hover:text-ink"
           >
             [ Exp&eacute;rience #001 en cours &rarr; ]
