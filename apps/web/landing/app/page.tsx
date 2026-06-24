@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSubjectId } from "@/hooks/useSubjectId";
@@ -43,6 +44,16 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col bg-paper text-ink">
+      <div className="flex justify-center pt-12">
+        <Image
+          src="/shex.png"
+          alt="shex"
+          width={72}
+          height={72}
+          priority
+          className="opacity-90"
+        />
+      </div>
       <div className="flex flex-1 items-center justify-center px-6">
         <p className="w-full max-w-md whitespace-pre-wrap text-[13px] leading-relaxed">
           {before}
