@@ -1,0 +1,39 @@
+// Prisma owns the `public` schema (app tables). Supabase manages its own
+// `auth` / `storage` schemas — don't model those here.
+
+generator client {
+  provider = "prisma-client-js"
+  // "native" covers local dev. Deploy targets are added so `prisma generate`
+  // during the Vercel build produces a compatible engine:
+  //   Vercel  -> rhel-openssl-3.0.x        Railway -> add "debian-openssl-3.0.x"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  // Pooled connection (Supabase pooler, port 6543) — app runtime / serverless.
+  url = env("DATABASE_URL")
+  // Direct connection (port 5432) — migrations / db push (no pooling).
+  directUrl = env("DIRECT_URL")
+}
+
+/// Analytics events: "what users do on which app".
+model Event {
+  id        BigInt   @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  app       String
+  name      String
+  subjectId String?  @map("subject_id")
+  sessionId String?  @map("session_id")
+  userId    String?  @map("user_id") @db.Uuid // FK to auth.users once auth lands
+  props     Json     @default("{}")
+  path      String?
+  referrer  String?
+  userAgent String?  @map("user_agent")
+  ip        String?  @db.Inet
+
+  @@index([app, name, createdAt(sort: Desc)])
+  @@index([subjectId])
+  @@index([createdAt(sort: Desc)])
+  @@map("events")
+}

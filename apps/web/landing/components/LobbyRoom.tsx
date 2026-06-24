@@ -16,6 +16,8 @@ import { loadPoseLandmarker, loadHandLandmarker } from '@/lib/mediapipe';
 import { DuelStage } from '@/components/DuelStage';
 import { ResultScreen } from '@/components/ResultScreen';
 import { Button } from '@/components/ui/Button';
+import { track } from '@/lib/track';
+import { webcamErrorCopy } from '@/components/WebcamError';
 
 // Thud lands just as the frame starts to topple (DuelStage freezes ~1500ms).
 const SHOWDOWN_FREEZE_AUDIO_MS = 1450;
@@ -95,7 +97,8 @@ export function LobbyRoom({
   bestOf?: number;
 }) {
   const duel = useDuel(lobbyId, name, bestOf);
-  const { stream, error: camError } = useWebcam(true);
+  const { stream, error: camError, errorKind: camErrorKind, retry: retryCam } =
+    useWebcam(true);
   const webrtc = useWebRTC(duel.socket, stream, duel.initiator);
   const audio = useDuelAudio();
   const vertical = useOrientation() === 'portrait';
@@ -390,14 +393,21 @@ export function LobbyRoom({
         />
       )}
 
-      {/* Camera blocked - hard stop. */}
-      {camError && (
+      {/* Camera blocked - hard stop, with tailored recovery. */}
+      {camErrorKind && (
         <Overlay>
-          <h2 className="font-western text-3xl text-bone">Camera blocked</h2>
-          <p className="mt-3 text-sand/70">
-            StandoffDuel needs your webcam. Allow access in your browser and
-            reload.
+          <h2 className="font-western text-3xl text-bone">
+            {webcamErrorCopy[camErrorKind].title}
+          </h2>
+          <p className="mt-3 max-w-sm text-sand/70">
+            {webcamErrorCopy[camErrorKind].steps}
           </p>
+          <button
+            onClick={retryCam}
+            className="mt-6 rounded-sm border-2 border-ember px-6 py-2 font-impact uppercase tracking-widest text-ember transition-colors hover:bg-ember hover:text-night"
+          >
+            {webcamErrorCopy[camErrorKind].cta}
+          </button>
           <HomeLink />
         </Overlay>
       )}
@@ -701,6 +711,7 @@ function LobbyOverlay({
     try {
       await navigator.clipboard.writeText(buildUrl());
       setCopied(true);
+      track('standoff', 'invite_shared', { method: 'copy' });
       setTimeout(() => setCopied(false), 1500);
     } catch {
       /* clipboard blocked, the code is shown anyway */
@@ -716,6 +727,7 @@ function LobbyOverlay({
           text: `${selfName} challenges you to a duel`,
           url: buildUrl(),
         });
+        track('standoff', 'invite_shared', { method: 'web_share' });
         return;
       } catch {
         /* share cancelled, leave it */

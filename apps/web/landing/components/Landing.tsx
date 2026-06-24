@@ -9,13 +9,15 @@ import {
 } from '@shadyexperiments/shared';
 import { useWebcam } from '@/hooks/useWebcam';
 import { Button } from '@/components/ui/Button';
+import { track } from '@/lib/track';
+import { WebcamError } from '@/components/WebcamError';
 
 // The sun-bleached paper of the wanted poster, shared by every plate.
 const PAPER = { background: 'linear-gradient(160deg,#ece0c2,#cdba8f)' } as const;
 
 export function Landing() {
   const router = useRouter();
-  const { stream, error } = useWebcam(true);
+  const { stream, errorKind, retry } = useWebcam(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [name, setName] = useState('');
   const [joinId, setJoinId] = useState('');
@@ -45,7 +47,10 @@ export function Landing() {
     router.push(bo ? `/standoff/lobby/${id}?bo=3` : `/standoff/lobby/${id}`);
   };
 
-  const create = () => go(generateLobbyId(), bo3);
+  const create = () => {
+    track('standoff', 'duel_created', { bestOf: bo3 ? 3 : 1 });
+    go(generateLobbyId(), bo3);
+  };
 
   const join = () => {
     const id = normalizeLobbyId(joinId);
@@ -53,6 +58,7 @@ export function Landing() {
       setJoinErr('Try a code like OUTLAW-42');
       return;
     }
+    track('standoff', 'duel_join_submitted');
     go(id);
   };
 
@@ -170,16 +176,8 @@ export function Landing() {
                 style={{ transform: 'scaleX(-1)' }}
               />
               <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-black/40" />
-              {error && (
-                <div className="absolute inset-0 flex items-center justify-center bg-night/70 p-6 text-center text-sand/80">
-                  <p>
-                    Camera blocked.
-                    <br />
-                    Allow access to step into the street.
-                  </p>
-                </div>
-              )}
-              {!stream && !error && (
+              {errorKind && <WebcamError kind={errorKind} onRetry={retry} />}
+              {!stream && !errorKind && (
                 <div className="absolute inset-0 flex items-center justify-center bg-charcoal text-sand/50">
                   Warming up the lens…
                 </div>

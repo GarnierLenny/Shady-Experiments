@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { DuelResult, PublicPlayer, ReactionOutcome } from '@shadyexperiments/shared';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/Button';
+import { track } from '@/lib/track';
 import { TableDressing } from '@/components/TableDressing';
 import { woodBackgroundStyle } from '@/lib/wood';
 import { renderShareCard, shareOrDownload } from '@/lib/share-card';
@@ -129,6 +130,7 @@ export function ResultScreen({
     try {
       await navigator.clipboard.writeText(permalink());
       setCopied(true);
+      track('standoff', 'result_shared', { method: 'copy_link' });
       setTimeout(() => setCopied(false), 1500);
     } catch {
       /* clipboard blocked */
@@ -152,6 +154,7 @@ export function ResultScreen({
         `standoffduel-${lobbyId}.png`,
         `${winnerName} is the fastest gun in our StandoffDuel. Think you're faster? ${permalink()}`,
       );
+      track('standoff', 'result_shared', { method: 'web_share' });
     } finally {
       setSharing(false);
     }
@@ -168,9 +171,11 @@ export function ResultScreen({
       `standoffduel-${lobbyId}.${ext}`,
       `${winnerName} won our StandoffDuel 🤠🔫 Think you're faster? ${permalink()}`,
     );
+    track('standoff', 'result_shared', { method: 'clip' });
   };
 
   const tweet = () => {
+    track('standoff', 'result_shared', { method: 'twitter' });
     const text = youWon
       ? `I out-drew ${loserName}${result.reactionMs ? ` in ${result.reactionMs}ms` : ''} on StandoffDuel 🤠🔫 Think you're faster?`
       : isTie

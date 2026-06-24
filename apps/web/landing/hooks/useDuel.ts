@@ -11,6 +11,7 @@ import {
   SocketEvents,
 } from '@shadyexperiments/shared';
 import { createSocket, DuelSocket } from '@/lib/socket';
+import { track } from '@/lib/track';
 
 /** Client-side cinematic sub-phases derived from server events + timers. */
 export type CinematicPhase =
@@ -76,6 +77,9 @@ export function useDuel(
 
   const timersRef = useRef<number[]>([]);
   const drawReportedRef = useRef(false);
+  const selfIdRef = useRef<string | null>(null);
+  const bestOfRef = useRef(requestedBestOf);
+  const joinedTrackedRef = useRef(false);
 
   const clearTimers = useCallback(() => {
     timersRef.current.forEach((t) => window.clearTimeout(t));
@@ -99,6 +103,15 @@ export function useDuel(
       setFull(s.full);
       setBestOf(s.bestOf);
       setScores(s.scores);
+      selfIdRef.current = s.selfId;
+      bestOfRef.current = s.bestOf;
+      if (!joinedTrackedRef.current) {
+        joinedTrackedRef.current = true;
+        track('standoff', 'lobby_joined', {
+          bestOf: s.bestOf,
+          players: s.players.length,
+        });
+      }
       // Between rounds, reset the cinematic so the lobby shows again.
       if (s.status === 'waiting' || s.status === 'ready') {
         clearTimers();
@@ -119,6 +132,7 @@ export function useDuel(
       setDraw(null);
       drawReportedRef.current = false;
       setStart(p);
+      track('standoff', 'duel_started', { bestOf: bestOfRef.current });
       clearTimers();
       setPhase('zoom');
       timersRef.current.push(
@@ -138,6 +152,14 @@ export function useDuel(
     socket.on(SocketEvents.GameResult, (r) => {
       clearTimers();
       setResult(r);
+      track('standoff', 'duel_completed', {
+        reason: r.reason,
+        won: r.winnerId !== null && r.winnerId === selfIdRef.current,
+        isTie: r.winnerId === null,
+        reactionMs: r.reactionMs,
+        bestOf: r.bestOf ?? 1,
+        matchOver: r.matchOver ?? true,
+      });
       // Hold a suspense beat (frame fall) before revealing the result.
       setPhase('showdown');
       timersRef.current.push(

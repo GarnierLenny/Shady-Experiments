@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { DuelResultRecord } from '@shadyexperiments/shared';
 import { apiUrl } from '@/lib/api-url';
+import { TrackPermalinkView } from '@/components/TrackPermalinkView';
 
 type Params = Promise<{ id: string | string[] }>;
 
@@ -74,6 +75,7 @@ export default async function ResultPermalinkPage({ params }: { params: Params }
 
   return (
     <main className="relative z-10 flex min-h-[100dvh] flex-col items-center justify-center gap-6 px-6 py-16 text-center">
+      <TrackPermalinkView resultId={pick(id)} found={!!rec} />
       <p className="font-impact text-xs uppercase tracking-[0.4em] text-ember">
         ★ Standoff Duel ★
       </p>

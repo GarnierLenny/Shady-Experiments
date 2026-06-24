@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SocketEvents } from '@shadyexperiments/shared';
 import type { DuelSocket } from '@/lib/socket';
-import { iceServers } from '@/lib/ice';
+import { iceServers, hasTurn } from '@/lib/ice';
+import { track } from '@/lib/track';
 
 /** Lifecycle of the peer media link, so the UI can stop hiding failures. */
 export type WebRTCStatus = 'idle' | 'connecting' | 'connected' | 'failed';
@@ -45,6 +46,19 @@ export function useWebRTC(
   const timeoutRef = useRef<number | null>(null);
   const statusRef = useRef<WebRTCStatus>('idle');
   statusRef.current = status;
+
+  // Report the connection outcome once per mount (a retry reloads the page).
+  const outcomeTrackedRef = useRef(false);
+  useEffect(() => {
+    if (outcomeTrackedRef.current) return;
+    if (status === 'connected') {
+      outcomeTrackedRef.current = true;
+      track('standoff', 'peer_connected');
+    } else if (status === 'failed') {
+      outcomeTrackedRef.current = true;
+      track('standoff', 'peer_failed', { usedTurn: hasTurn() });
+    }
+  }, [status]);
 
   const clearTimer = useCallback(() => {
     if (timeoutRef.current !== null) {

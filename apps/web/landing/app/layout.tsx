@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import { TrackPageView } from "@/components/TrackPageView";
 
 // Space Grotesk Bold for the rare title. IBM Plex Mono for absolutely
 // everything else — body, data, labels, buttons, metadata.
@@ -27,7 +28,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr" className={`${display.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <TrackPageView />
+        {children}
+      </body>
     </html>
   );
 }

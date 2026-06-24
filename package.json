@@ -13,7 +13,8 @@
   },
   "scripts": {
     "build:shared": "npm run build -w @shadyexperiments/shared",
-    "predev": "npm run build:shared",
+    "build:db": "npm run build -w @shadyexperiments/db",
+    "predev": "npm run build:shared && npm run build:db",
     "dev": "concurrently -n shared,api,web -c gray,cyan,blue \"npm:dev:shared\" \"npm:dev:api\" \"npm:dev:landing\"",
     "dev:shared": "npm run dev -w @shadyexperiments/shared",
     "dev:api": "npm run dev -w @shadyexperiments/api",
