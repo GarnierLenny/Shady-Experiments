@@ -66,5 +66,14 @@ export declare const DUEL_TIMINGS: {
     readonly DRAW_WINDOW_MS: 6000;
 };
 export declare const MAX_PLAYERS_PER_LOBBY = 2;
+/**
+ * Above this, a "reaction" is almost certainly a missed/slow webcam detection
+ * (or a genuinely sluggish round you still won) rather than a real fast draw.
+ * We keep storing it, but hide the chrono in the UI instead of bragging an
+ * absurd time.
+ */
+export declare const MAX_BRAG_REACTION_MS = 1500;
+/** True when a reaction is fast enough to show off (not a detection miss). */
+export declare function isBragWorthyReaction(ms: number | null | undefined): ms is number;
 /** Inclusive random integer in [min, max]. */
 export declare function randomDelayMs(min?: number, max?: number): number;

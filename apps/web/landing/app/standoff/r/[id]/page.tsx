@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { DuelResultRecord } from '@shadyexperiments/shared';
 import { apiUrl } from '@/lib/api-url';
 import { TrackPermalinkView } from '@/components/TrackPermalinkView';
+import { isBragWorthyReaction } from '@shadyexperiments/shared';
 
 type Params = Promise<{ id: string | string[] }>;
 
@@ -30,7 +31,7 @@ function ogImage(rec: DuelResultRecord): string {
   const q = new URLSearchParams();
   if (rec.winnerName) q.set('w', rec.winnerName);
   if (rec.loserName) q.set('l', rec.loserName);
-  if (rec.reactionMs != null) q.set('ms', String(rec.reactionMs));
+  if (isBragWorthyReaction(rec.reactionMs)) q.set('ms', String(rec.reactionMs));
   q.set('reason', rec.reason);
   if (rec.isTie) q.set('tie', '1');
   // basePath '/standoff' is not auto-applied to metadata image URLs.
@@ -50,7 +51,7 @@ export async function generateMetadata({
     ? 'A dead-even standoff · StandoffDuel'
     : rec.winnerName
       ? `${rec.winnerName} won a StandoffDuel${
-          rec.reactionMs != null ? ` in ${rec.reactionMs}ms` : ''
+          isBragWorthyReaction(rec.reactionMs) ? ` in ${rec.reactionMs}ms` : ''
         }`
       : 'StandoffDuel result';
   const description = "The fastest draw on the internet wins. Think you're faster?";
@@ -109,7 +110,7 @@ export default async function ResultPermalinkPage({ params }: { params: Params }
           <p className="font-impact uppercase tracking-widest text-sand/70">
             {loserLine(rec)}
           </p>
-          {rec.reactionMs != null && (
+          {isBragWorthyReaction(rec.reactionMs) && (
             <p className="font-impact text-2xl uppercase tracking-wider text-gold">
               Drew in <span className="text-3xl">{rec.reactionMs} ms</span>
             </p>

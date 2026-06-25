@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { OG_SIZE, C, OG_BACKGROUND, loadOgFonts, Star } from '@/lib/og';
+import { isBragWorthyReaction } from '@shadyexperiments/shared';
 
 // Link preview for a /r/<id> result permalink, rendered from query params so it
 // needs no data fetch of its own. This is what makes a shared result unfurl into
@@ -11,6 +12,7 @@ export async function GET(req: Request) {
   const ms = searchParams.get('ms');
   const reason = searchParams.get('reason') || 'draw';
   const tie = searchParams.get('tie') === '1';
+  const showMs = !tie && isBragWorthyReaction(ms ? Number(ms) : null);
   const fonts = await loadOgFonts();
 
   const headline = tie ? 'NO BLOOD SPILLED' : (winner || 'THE STREET').toUpperCase();
@@ -97,7 +99,7 @@ export async function GET(req: Request) {
           {subline}
         </div>
 
-        {ms && !tie ? (
+        {showMs ? (
           <div
             style={{
               display: 'flex',
@@ -142,7 +144,7 @@ export async function GET(req: Request) {
             fontFamily: 'Rye',
             fontSize: 28,
             color: C.gold,
-            marginTop: ms && !tie ? 34 : 44,
+            marginTop: showMs ? 34 : 44,
           }}
         >
           Think you&apos;re faster?

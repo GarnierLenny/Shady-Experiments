@@ -113,6 +113,20 @@ export function Landing() {
               Create a duel →
             </Button>
 
+            <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-sand/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+              <input
+                type="checkbox"
+                checked={bo3}
+                onChange={(e) => setBo3(e.target.checked)}
+                className="peer sr-only"
+              />
+              <span className="relative h-5 w-9 shrink-0 rounded-full bg-dust transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-bone after:transition-transform peer-checked:bg-ember peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-ember/60" />
+              Best of 3
+              <span className="text-sand/65">
+                (first to two draws takes the match)
+              </span>
+            </label>
+
             <div className="flex items-center gap-4 py-1 font-impact text-[11px] uppercase tracking-[0.3em] text-sand/40">
               <span className="h-px flex-1 bg-dust" />
               or answer a call-out
@@ -135,19 +149,6 @@ export function Landing() {
               </Button>
             </div>
             {joinErr && <p className="text-left text-sm text-rust">{joinErr}</p>}
-
-            <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-sand/90 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
-              <input
-                type="checkbox"
-                checked={bo3}
-                onChange={(e) => setBo3(e.target.checked)}
-                className="h-4 w-4 accent-ember"
-              />
-              Best of 3
-              <span className="text-sand/65">
-                (first to two draws takes the match)
-              </span>
-            </label>
           </div>
         </section>
 

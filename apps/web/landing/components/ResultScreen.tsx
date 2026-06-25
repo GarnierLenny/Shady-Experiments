@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { DuelResult, PublicPlayer, ReactionOutcome } from '@shadyexperiments/shared';
+import {
+  DuelResult,
+  PublicPlayer,
+  ReactionOutcome,
+  isBragWorthyReaction,
+} from '@shadyexperiments/shared';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/Button';
 import { track } from '@/lib/track';
@@ -177,7 +182,7 @@ export function ResultScreen({
   const tweet = () => {
     track('standoff', 'result_shared', { method: 'twitter' });
     const text = youWon
-      ? `I out-drew ${loserName}${result.reactionMs ? ` in ${result.reactionMs}ms` : ''} on StandoffDuel 🤠🔫 Think you're faster?`
+      ? `I out-drew ${loserName}${isBragWorthyReaction(result.reactionMs) ? ` in ${result.reactionMs}ms` : ''} on StandoffDuel 🤠🔫 Think you're faster?`
       : isTie
         ? `Nobody flinched, a dead-even standoff on StandoffDuel 🤠🔫 Come settle it.`
         : `${winnerName} just out-drew me on StandoffDuel 🤠🔫 Avenge me?`;
@@ -419,7 +424,7 @@ function WantedPoster({
         <p className="font-impact uppercase tracking-wider">
           Drew in{' '}
           <span className="text-2xl">
-            {reactionMs != null ? `${reactionMs} ms` : 'a blur'}
+            {isBragWorthyReaction(reactionMs) ? `${reactionMs} ms` : 'a blur'}
           </span>
         </p>
         <p className="mt-2 text-[9px] uppercase tracking-[0.3em] opacity-70">

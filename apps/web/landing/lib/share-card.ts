@@ -1,3 +1,4 @@
+import { isBragWorthyReaction } from '@shadyexperiments/shared';
 import { drawWood } from '@/lib/wood';
 
 export interface ShareCardData {
@@ -269,7 +270,7 @@ function drawPoster(
   ctx.fillText('FASTEST GUN IN THE WEST', 0, py + ph + 72);
   ctx.font = '700 22px "Oswald", Impact, sans-serif';
   ctx.fillText(
-    reactionMs != null ? `DREW IN ${reactionMs} MS` : 'THE LAW WINS',
+    isBragWorthyReaction(reactionMs) ? `DREW IN ${reactionMs} MS` : 'THE LAW WINS',
     0,
     py + ph + 106,
   );
