@@ -95,16 +95,17 @@ export function WhisperRoom({ roomId, name }: { roomId: string; name: string }) 
   if (wh.result || wh.status === 'complete') {
     return (
       <Stage level={wh.level}>
-        <div style={{ textAlign: 'center' }}>
-          <p className="faint" style={{ letterSpacing: '.4em', fontSize: 12 }}>// TRANSMISSION COMPLETE</p>
-          <h1 className="bigwin" style={{ marginTop: 14 }}>MISSION COMPLETE</h1>
-          <div className="panel" style={{ marginTop: 26, display: 'inline-block', minWidth: 220 }}>
-            <p className="faint" style={{ fontSize: 11, letterSpacing: '.3em' }}>COMPLETION TIME</p>
-            <p className="big amber" style={{ fontSize: 40 }}>{fmt(wh.result?.elapsedMs ?? 0)}</p>
+        <div className="endcard">
+          <span className="corner tl" /><span className="corner tr" /><span className="corner bl" /><span className="corner br" />
+          <div className="end-over">// transmission complete</div>
+          <h1 className="end-head" style={{ color: 'var(--green)' }}>MISSION COMPLETE</h1>
+          <div className="end-uline" style={{ background: 'var(--green)' }} />
+          <div className="end-stat">
+            time <b>{fmt(wh.result?.elapsedMs ?? 0)}</b> · secured <b>{wh.result?.puzzlesSolved ?? 0}</b>
           </div>
-          <div style={{ marginTop: 24, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn" style={{ padding: '12px 22px' }} onClick={wh.rematch}>PLAY AGAIN</button>
-            <Link href="/whispering-hacker" className="btn" style={{ padding: '12px 22px' }}>NEW ROOM</Link>
+          <div className="end-btns">
+            <button className="btn primary" onClick={wh.rematch}>PLAY AGAIN</button>
+            <Link href="/whispering-hacker" className="btn">NEW ROOM</Link>
             {wh.result && (
               <CopyButton value={`${origin}/whispering-hacker/r/${wh.result.resultId}`} label="COPY RESULT LINK" />
             )}
@@ -112,6 +113,14 @@ export function WhisperRoom({ roomId, name }: { roomId: string; name: string }) 
         </div>
       </Stage>
     );
+  }
+
+  // ---- Level cleared (awaiting NEXT) / failed (awaiting RETRY) -----------
+  if (wh.status === 'cleared') {
+    return <EndScreen kind="complete" level={wh.level} strikes={wh.strikes} maxStrikes={wh.maxStrikes} onNext={wh.next} />;
+  }
+  if (wh.status === 'failed') {
+    return <EndScreen kind="failed" level={wh.level} reason={wh.levelFailReason} onRetry={wh.retry} />;
   }
 
   // ---- Playing — full device shell --------------------------------------
@@ -128,11 +137,11 @@ export function WhisperRoom({ roomId, name }: { roomId: string; name: string }) 
           voiceOk={voice.status === 'connected'}
         />
         <div className="body">
-          <LeftRail level={wh.level} totalLevels={wh.totalLevels} startedAtMs={wh.startedAt} levelName={levelMeta?.name ?? ''} />
+          <LeftRail level={wh.level} totalLevels={wh.totalLevels} levelName={levelMeta?.name ?? ''} levelDeadline={wh.levelDeadline} strikes={wh.strikes} maxStrikes={wh.maxStrikes} />
           {wh.selfRole === 'operator' ? (
             <OperatorManual puzzles={wh.puzzles} level={wh.level} />
           ) : (
-            <HackerTerminal puzzles={wh.puzzles} level={wh.level} totalLevels={wh.totalLevels} startedAt={wh.startedAt} onSolved={wh.solved} />
+            <HackerTerminal puzzles={wh.puzzles} level={wh.level} totalLevels={wh.totalLevels} startedAt={wh.startedAt} onSolved={wh.solved} onFailed={wh.failed} />
           )}
           <RightRail voice={voice} level={wh.level} levelName={levelMeta?.name ?? ''} initialElapsed={elapsed} />
         </div>
@@ -241,24 +250,21 @@ function TopBar({
   );
 }
 
-function LeftRail({ level, totalLevels, startedAtMs, levelName }: { level: number; totalLevels: number; startedAtMs: number | null; levelName: string }) {
+function LeftRail({ level, totalLevels, levelName, levelDeadline, strikes, maxStrikes }: { level: number; totalLevels: number; levelName: string; levelDeadline: number | null; strikes: number; maxStrikes: number }) {
   const [now, setNow] = useState(() => Date.now());
-  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
-  const elapsed = startedAtMs ? now - startedAtMs : 0;
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t); }, []);
+  const remain = levelDeadline ? Math.max(0, levelDeadline - now) : 0;
+  const low = remain <= 30000;
   return (
     <div className="col left">
       <div className="lbl muted">Level</div>
       <div className="big"><span className="amber">{level}</span> <span className="faint">/ {totalLevels}</span></div>
       <div className="sub">{levelName}</div>
       <div className="rule" />
-      <div className="lbl muted">Run time</div>
-      <div className="big amber" style={{ fontSize: 28 }}>{fmt(elapsed)}</div>
+      <div className="lbl muted">Time left</div>
+      <div className="big" style={{ fontSize: 34, color: low ? 'var(--red)' : 'var(--amber)' }}>{fmt(remain)}</div>
       <div className="rule" />
-      <div className="lbl muted">Audio event</div>
-      <div className="event">
-        <div className="evrow"><span className="evname">{levelName}</span><span className="evtimer">live</span></div>
-        <div className="evbar"><i style={{ background: 'var(--amber)' }} /></div>
-      </div>
+      <StrikePanel strikes={strikes} maxStrikes={maxStrikes} />
       <div className="micsection">
         <div className="lbl muted">Mic</div>
         <div className="micv">
@@ -267,6 +273,64 @@ function LeftRail({ level, totalLevels, startedAtMs, levelName }: { level: numbe
         </div>
       </div>
     </div>
+  );
+}
+
+/** Both-players strike panel: three dark-red crosses that light up per error;
+ *  once all three are lit (one more is fatal) it blinks LAST CHANCE. */
+function StrikePanel({ strikes, maxStrikes }: { strikes: number; maxStrikes: number }) {
+  const last = strikes >= maxStrikes;
+  return (
+    <div className={`strikebox${last ? ' lastchance' : ''}`}>
+      <div className="lbl muted">Strikes <span className="faint">/ {maxStrikes}</span></div>
+      <div className="strikes">
+        {Array.from({ length: maxStrikes }, (_, i) => (
+          <span key={i} className={`strikex${i < strikes ? ' on' : ''}`}>✕</span>
+        ))}
+      </div>
+      {last && <div className="lastchance-txt">LAST CHANCE</div>}
+    </div>
+  );
+}
+
+/** End-of-level screen (variant A — terminal modal): LEVEL COMPLETE → NEXT LEVEL,
+ *  or LEVEL FAILED → RETRY; QUIT leaves. Shown to both players. */
+function EndScreen({
+  kind, level, reason, strikes, maxStrikes, onNext, onRetry,
+}: {
+  kind: 'complete' | 'failed';
+  level: number;
+  reason?: 'timeout' | 'strikes' | null;
+  strikes?: number;
+  maxStrikes?: number;
+  onNext?: () => void;
+  onRetry?: () => void;
+}) {
+  const complete = kind === 'complete';
+  const color = complete ? 'var(--green)' : 'var(--red)';
+  return (
+    <Stage level={level}>
+      <div className="endcard">
+        <span className="corner tl" /><span className="corner tr" /><span className="corner bl" /><span className="corner br" />
+        <div className="end-over">{complete ? '// transmission complete' : '// link severed'}</div>
+        <h1 className="end-head" style={{ color }}>{complete ? 'LEVEL COMPLETE' : 'LEVEL FAILED'}</h1>
+        <div className="end-uline" style={{ background: color }} />
+        <div className="end-sub">
+          {complete ? `Level ${level} secured` : reason === 'strikes' ? 'too many strikes' : 'the clock ran out'}
+        </div>
+        {complete && typeof strikes === 'number' && (
+          <div className="end-stat">strikes <b>{strikes} / {maxStrikes}</b></div>
+        )}
+        <div className="end-btns">
+          {complete ? (
+            <button className="btn primary" onClick={onNext}>NEXT LEVEL</button>
+          ) : (
+            <button className="btn primary" onClick={onRetry}>RETRY</button>
+          )}
+          <Link href="/whispering-hacker" className="btn quit">QUIT</Link>
+        </div>
+      </div>
+    </Stage>
   );
 }
 

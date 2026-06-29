@@ -253,6 +253,15 @@
   .col{padding:26px 24px;overflow:auto;min-height:0;flex:none}
   .col.left{width:250px;border-right:1px solid var(--line);display:flex;flex-direction:column}
   .micsection{margin:auto 0;width:100%}
+  .strikebox{border:1px solid var(--line2);border-radius:6px;padding:12px 14px;margin-top:4px;background:rgba(255,255,255,.012)}
+  .strikebox.lastchance{border-color:var(--red);animation:lcbox 1s steps(1) infinite}
+  @keyframes lcbox{50%{border-color:rgba(239,91,84,.25)}}
+  .strikes{display:flex;gap:12px;margin-top:8px}
+  .strikex{font-size:26px;line-height:1;color:#4a1618}
+  .strikex.on{color:var(--red);text-shadow:0 0 10px rgba(239,91,84,.65)}
+  .lastchance-txt{display:none;margin-top:11px;text-align:center;color:var(--red);font-weight:700;letter-spacing:.18em;font-size:15px;animation:lcblink .7s steps(1) infinite}
+  .strikebox.lastchance .lastchance-txt{display:block}
+  @keyframes lcblink{50%{opacity:0}}
   .col.right{width:260px;border-left:1px solid var(--line);display:flex;flex-direction:column}
   .lbl{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber)}
   .lbl.muted{color:var(--faint)}
@@ -463,6 +472,12 @@
       <div class="rule"></div>
       <div class="lbl muted">Level time</div><div class="big amber" id="chrono">00:00</div>
       <div class="rule"></div>
+      <div class="strikebox" id="strikebox">
+        <div class="lbl muted">Strikes <span style="color:var(--faint)">/ 3</span></div>
+        <div class="strikes" id="strikes"></div>
+        <div class="lastchance-txt">LAST CHANCE</div>
+      </div>
+      <div class="rule"></div>
       <div class="lbl muted">Audio event</div>
       <div class="event"><div class="evrow"><span class="evname" id="evname">WHISPER</span><span class="evtimer" id="evtimer">00:00</span></div><div class="evbar"><i id="evbar"></i></div></div>
       <div class="micsection">
@@ -604,7 +619,10 @@ function genHandshake(){const e=HANDSHAKE_BOOK[Math.floor(Math.random()*HANDSHAK
 function newPuzzle(type,name,title){const g=type==='handshake'?genHandshake():type==='coord'?genCoord():type==='wiring'?genWiring():type==='sliders'?genSliders():type==='code'?genCode():type==='constellation'?genConstellation():type==='id'?genIdCard():type==='citymap'?genCityMap():type==='maze'?genMaze():type==='signal'?genSignal():genRelays();return{type,name,title,solved:false,reseeding:false,max:DUR[type],t:DUR[type],...g};}
 
 let puzzles,active,levelStart,codeSel,codeFocus,seq,practiceMode=false,level=1,hsInput='',coordSel=[],wireConns={},dragging=null,magnetTarget=null,sliderVals={p:50,c:50,s:50,x:50},p2sel=null,p2dial={n1:0,n2:1},constSel=null,constEdges=new Set(),skyDrag=null,skyMag=null,skyPt=null,digXY=null,signalSeq=[];
-function resetLevel(){ID_TODAY=randomSysDate();sysAnchor=Date.now();const defs=LEVEL_PUZZLES[level]||LEVEL_PUZZLES[1];puzzles=defs.map(d=>newPuzzle(d.type,d.name,d.title));active=0;levelStart=Date.now();document.getElementById('clear').classList.remove('show');logEv('session started','amber');resetInputs();renderTabs();renderPuzzle();syncP2();}
+let levelStrikes=0;
+/* KTANE strikes: 3 crosses light up on errors; the 4th is fatal (handled in wrong()). */
+function renderStrikes(){const box=document.getElementById('strikebox'),el=document.getElementById('strikes');if(el)el.innerHTML=[0,1,2].map(i=>`<span class="strikex${i<levelStrikes?' on':''}">✕</span>`).join('');if(box)box.classList.toggle('lastchance',levelStrikes>=3);}
+function resetLevel(){ID_TODAY=randomSysDate();sysAnchor=Date.now();const defs=LEVEL_PUZZLES[level]||LEVEL_PUZZLES[1];puzzles=defs.map(d=>newPuzzle(d.type,d.name,d.title));active=0;levelStart=Date.now();document.getElementById('clear').classList.remove('show');logEv('session started','amber');resetInputs();levelStrikes=0;renderStrikes();renderTabs();renderPuzzle();syncP2();}
 function resetInputs(){codeSel={shape:null,color:null,symbol:null};codeFocus='shape';seq=[];hsInput='';coordSel=[];wireConns={};dragging=null;magnetTarget=null;sliderVals={p:50,c:50,s:50,x:50};p2sel=null;p2dial={n1:0,n2:1};constSel=null;constEdges=new Set();skyDrag=null;skyMag=null;skyPt=null;digXY=null;signalSeq=[];}
 function fmt(s){s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
 function logEv(t,c=''){const log=document.getElementById('log');const ts=new Date().toLocaleTimeString('en-GB').slice(0,8);const r=document.createElement('div');r.className='row '+c;r.innerHTML=`<span class="ts">${ts}</span><span class="ev">${t}</span>`;log.prepend(r);while(log.children.length>8)log.removeChild(log.lastChild);}
@@ -849,7 +867,7 @@ function updateHs(){const s=document.getElementById('hsslots');if(s)s.innerHTML=
 function submitHandshake(){if(hsInput.length!==4)return;if(hsInput===puzzles[active].answer.key)solveOk();else{wrong();hsInput='';updateHs();}}
 
 function solveOk(){const p=puzzles[active];p.solved=true;setFb('✓ ACCESS GRANTED','ok');logEv(`sys 0${active+1} secured`,'green');renderTabs();renderPuzzle();syncP2();if(puzzles.every(x=>x.solved))levelClear();}
-function wrong(){setFb('✕ ACCESS DENIED','bad');logEv(`sys 0${active+1} rejected`,'red');}
+function wrong(){levelStrikes++;if(levelStrikes>3){setFb('✕ LEVEL FAILED — restarting','bad');logEv('level failed','red');resetLevel();return;}renderStrikes();setFb('✕ ACCESS DENIED — STRIKE','bad');logEv(`sys 0${active+1} rejected`,'red');}
 function demoText(p){if(p.type==='handshake')return `${p.challenge} → ${p.answer.key}`;if(p.type==='wiring')return p.wires.map(w=>`${w.lbl}:${w.cn}→${p.answer.map[w.lbl]}`).join(' · ');if(p.type==='sliders')return `①${p.sym1}→${p.answer.p},${p.answer.c} · ②${p.sym2}→${p.answer.s},${p.answer.x}`;if(p.type==='code'){const s=SHAPES.find(x=>x.id===p.answer.shape),y=SYMS.find(x=>x.id===p.answer.symbol);return `${s.g} ${s.n} · ${p.answer.color.toUpperCase()} · ${y.g} ${p.answer.symbol.toUpperCase()}`;}if(p.type==='coord'){const sh=SHAPES.find(s=>s.id===p.target.shape);return `${p.target.color.toUpperCase()} ${sh.g} ${sh.n} → ${p.answer.cells.join(', ')}`;}if(p.type==='id')return p.valid?'VALID — grant entry':('FORGED ['+p.ftype+'] — deny entry');if(p.type==='citymap'){const m=CITY_MAPS.find(x=>x.id===p.cid);return `${m.name} · dig ≈ ${p.treasure[0]},${p.treasure[1]}`;}if(p.type==='maze'){const route=mazePath(p.cid).map(([c,r])=>String.fromCharCode(65+c)+(r+1)).join(' → ');return MAZES.find(x=>x.id===p.cid).name+' · safe route '+route;}if(p.type==='signal'){const s=sigOf(p.sig);return `${s.name} → ${p.answer.order.map(id=>SHAPES.find(x=>x.id===id).n).join(' ')}`;}if(p.type==='constellation'){const c=CONSTELLATIONS.find(x=>x.id===p.cid);return `${c.name} · links ${p.target.edges.join(' ')}`;}return p.answer.order.toUpperCase().replace(/-/g,' → ');}
 function togglePractice(){practiceMode=!practiceMode;document.getElementById('practice').textContent='practice: '+(practiceMode?'on':'off');renderPuzzle();}
 

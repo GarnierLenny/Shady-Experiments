@@ -28,15 +28,9 @@ import {
   generatePuzzle,
   mazeGrid,
   mazeMines,
-  puzzleDuration,
 } from '@shadyexperiments/shared';
 import { dialSvg, faceSvg, mazeFogSvg, waveSvg } from '../../lib/whisper-draw';
 import { playTones } from '../../lib/whisper-signal';
-
-function fmt(ms: number): string {
-  const s = Math.max(0, Math.ceil(ms / 1000));
-  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-}
 
 function Shape({ id }: { id: string }) {
   const s = SHAPES.find((x) => x.id === id);
@@ -61,17 +55,13 @@ interface HackerProps {
   totalLevels: number;
   startedAt: number | null;
   onSolved: (index: number, seed: string) => void;
+  /** Report a wrong answer — the server reseeds that tab and resets its timer. */
+  onFailed: (index: number, seed: string) => void;
 }
 
-export function HackerTerminal({ puzzles, onSolved }: HackerProps) {
+export function HackerTerminal({ puzzles, onSolved, onFailed }: HackerProps) {
   const [active, setActive] = useState(0);
-  const [now, setNow] = useState(() => Date.now());
   const [fb, setFb] = useState<{ msg: string; ok: boolean } | null>(null);
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(t);
-  }, []);
 
   // Prefer an unsolved tab once the active one clears.
   useEffect(() => {
@@ -88,7 +78,9 @@ export function HackerTerminal({ puzzles, onSolved }: HackerProps) {
       setFb({ msg: '✓ ACCESS GRANTED', ok: true });
       onSolved(index, seed);
     } else {
-      setFb({ msg: '✕ ACCESS DENIED', ok: false });
+      // A mistake is a strike: burns time off the level countdown (server-side).
+      setFb({ msg: '✕ ACCESS DENIED — STRIKE', ok: false });
+      onFailed(index, seed);
       window.setTimeout(() => setFb(null), 1200);
     }
   }
@@ -99,29 +91,22 @@ export function HackerTerminal({ puzzles, onSolved }: HackerProps) {
         <span className="corner tl" /><span className="corner tr" /><span className="corner bl" /><span className="corner br" />
 
         <div className="tabs">
-          {puzzles.map((p, i) => {
-            const dur = puzzleDuration(p.type) * 1000;
-            const remain = p.deadline ? Math.max(0, p.deadline - now) : 0;
-            const warn = !p.solved && remain <= 8000;
-            const pct = p.solved ? 100 : Math.max(0, Math.min(100, (remain / dur) * 100));
-            return (
-              <div
-                key={p.index}
-                className={['tab', i === active ? 'active' : '', p.solved ? 'done' : ''].join(' ')}
-                onClick={() => setActive(i)}
-              >
-                <div className="n">
-                  <span>SYS 0{i + 1}</span>
-                  <span className={`cd${warn ? ' warn' : ''}`}>{p.solved ? '✓' : fmt(remain)}</span>
-                </div>
-                <div className="t">
-                  <span>{p.name}</span>
-                  {p.solved && <span className="chk">✓</span>}
-                </div>
-                <div className="bar"><i className={warn ? 'warn' : ''} style={{ width: `${pct}%` }} /></div>
+          {puzzles.map((p, i) => (
+            <div
+              key={p.index}
+              className={['tab', i === active ? 'active' : '', p.solved ? 'done' : ''].join(' ')}
+              onClick={() => setActive(i)}
+            >
+              <div className="n">
+                <span>SYS 0{i + 1}</span>
+                <span className="cd">{p.solved ? '✓' : i === active ? '●' : '○'}</span>
               </div>
-            );
-          })}
+              <div className="t">
+                <span>{p.name}</span>
+                {p.solved && <span className="chk">✓</span>}
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="pcard" style={{ marginTop: 18 }}>

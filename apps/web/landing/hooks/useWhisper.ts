@@ -30,10 +30,23 @@ export interface WhisperState {
   puzzles: PuzzleSlot[];
   startedAt: number | null;
   result: WhisperCompletePayload | null;
+  /** Epoch ms the level countdown hits zero; null in lobby. */
+  levelDeadline: number | null;
+  /** Wrong answers made this level, and the cap before it fails. */
+  strikes: number;
+  maxStrikes: number;
+  /** When status is 'failed', why; null otherwise. */
+  levelFailReason: 'timeout' | 'strikes' | null;
   ready: () => void;
+  /** Advance to the next level (from the cleared screen). */
+  next: () => void;
+  /** Restart the current level (from the failed screen). */
+  retry: () => void;
   rematch: () => void;
   /** Hacker reports a tab solved (the server trusts it — co-op). */
   solved: (index: number, seed: string) => void;
+  /** Hacker reports a wrong answer — the server reseeds that tab + resets its timer. */
+  failed: (index: number, seed: string) => void;
 }
 
 /**
@@ -56,6 +69,10 @@ export function useWhisper(roomId: string, name: string): WhisperState {
   const [puzzles, setPuzzles] = useState<PuzzleSlot[]>([]);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [result, setResult] = useState<WhisperCompletePayload | null>(null);
+  const [levelDeadline, setLevelDeadline] = useState<number | null>(null);
+  const [strikes, setStrikes] = useState(0);
+  const [maxStrikes, setMaxStrikes] = useState(3);
+  const [levelFailReason, setLevelFailReason] = useState<'timeout' | 'strikes' | null>(null);
 
   const joinedTrackedRef = useRef(false);
 
@@ -79,6 +96,10 @@ export function useWhisper(roomId: string, name: string): WhisperState {
       setTotalLevels(s.totalLevels);
       setPuzzles(s.puzzles);
       setStartedAt(s.startedAt);
+      setLevelDeadline(s.levelDeadline);
+      setStrikes(s.strikes);
+      setMaxStrikes(s.maxStrikes);
+      setLevelFailReason(s.levelFailReason);
       if (!joinedTrackedRef.current) {
         joinedTrackedRef.current = true;
         track('whisperinghacker', 'room_joined', {
@@ -117,9 +138,22 @@ export function useWhisper(roomId: string, name: string): WhisperState {
     socketRef.current?.emit(WhisperEvents.RoomRematch);
   }, []);
 
+  const next = useCallback(() => {
+    socketRef.current?.emit(WhisperEvents.RoomNext);
+  }, []);
+
+  const retry = useCallback(() => {
+    socketRef.current?.emit(WhisperEvents.RoomRetry);
+  }, []);
+
   const solved = useCallback((index: number, seed: string) => {
     socketRef.current?.emit(WhisperEvents.PuzzleSolved, { index, seed });
     track('whisperinghacker', 'puzzle_solved', { index });
+  }, []);
+
+  const failed = useCallback((index: number, seed: string) => {
+    socketRef.current?.emit(WhisperEvents.PuzzleFailed, { index, seed });
+    track('whisperinghacker', 'puzzle_failed', { index });
   }, []);
 
   return {
@@ -137,8 +171,15 @@ export function useWhisper(roomId: string, name: string): WhisperState {
     puzzles,
     startedAt,
     result,
+    levelDeadline,
+    strikes,
+    maxStrikes,
+    levelFailReason,
     ready,
     rematch,
+    next,
+    retry,
     solved,
+    failed,
   };
 }

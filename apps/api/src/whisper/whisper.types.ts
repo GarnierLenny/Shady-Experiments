@@ -35,4 +35,10 @@ export interface ServerWhisperRoom {
   startedAt: number | null;
   /** Puzzles solved across all levels so far (for the result record). */
   solvedTotal: number;
+  /** Epoch ms the level countdown hits zero (then the level fails); null when paused. */
+  levelDeadline: number | null;
+  /** Wrong answers made on the current level. */
+  strikes: number;
+  /** If status is 'failed', why; null otherwise. */
+  levelFailReason: 'timeout' | 'strikes' | null;
 }

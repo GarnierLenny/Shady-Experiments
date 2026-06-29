@@ -126,12 +126,10 @@ export interface WhisperPhase {
 export const WHISPER_PHASES: WhisperPhase[] = [
   { id: 'whisper', name: 'WHISPER', level: 1, blurb: 'clean line, no ambient noise' },
   { id: 'crowd', name: 'CROWD', level: 2, blurb: 'real crowd recording under the voice' },
-  { id: 'radio', name: 'RADIO', level: 2, blurb: 'AM band + static hiss' },
   { id: 'wind', name: 'WIND NOISE', level: 2, blurb: 'real wind recording under the voice' },
-  { id: 'compressor', name: 'VOICE COMPRESSOR', level: 2, blurb: 'pumped, squashed dynamics' },
-  { id: 'saturated', name: 'SATURATED', level: 2, blurb: 'overdriven, clipping' },
+  { id: 'saturated', name: 'SATURATED', level: 2, blurb: 'heavily overdriven, crushed' },
   { id: 'echo', name: 'ECHO', level: 3, blurb: 'repeating delay tail' },
-  { id: 'latency', name: 'LATENCY +1s', level: 3, blurb: 'voice arrives ~1s late' },
+  { id: 'latency', name: 'LATENCY +3s', level: 3, blurb: 'voice arrives ~3s late' },
   { id: 'talkie', name: 'TALKIE-WALKIE', level: 3, blurb: 'narrow band + squelch bursts' },
   { id: 'packetloss', name: 'PACKET LOSS', level: 3, blurb: 'random dropouts' },
   { id: 'robotic', name: 'ROBOTIC VOICE', level: 3, blurb: 'ring-mod robot timbre' },
@@ -149,47 +147,19 @@ const PHASE_BUILDERS: Record<string, PhaseBuilder> = {
     return () => hp.disconnect();
   },
   crowd: sampleBed(CROWD_URL, 0.6),
-  radio: (ctx, src, out) => {
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = 1600;
-    bp.Q.value = 4;
-    const sh = ctx.createWaveShaper();
-    sh.curve = distortionCurve(0.25);
-    src.connect(bp).connect(sh).connect(out);
-    const ns = loopNoise(ctx);
-    const hp = ctx.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.value = 2000;
-    const ng = ctx.createGain();
-    ng.gain.value = 0.08;
-    ns.connect(hp).connect(ng).connect(out);
-    ns.start();
-    return () => { try { ns.stop(); } catch { /**/ } bp.disconnect(); sh.disconnect(); ns.disconnect(); hp.disconnect(); ng.disconnect(); };
-  },
   wind: sampleBed(WIND_URL, 0.55),
-  compressor: (ctx, src, out) => {
-    const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -45;
-    comp.knee.value = 6;
-    comp.ratio.value = 14;
-    comp.attack.value = 0.002;
-    comp.release.value = 0.18;
-    const mk = ctx.createGain();
-    mk.gain.value = 2.4;
-    src.connect(comp).connect(mk).connect(out);
-    return () => { comp.disconnect(); mk.disconnect(); };
-  },
   saturated: (ctx, src, out) => {
+    const pre = ctx.createGain();
+    pre.gain.value = 4; // slam the signal hard into the shaper
     const sh = ctx.createWaveShaper();
-    sh.curve = distortionCurve(0.95);
+    sh.curve = distortionCurve(6); // very heavy clipping
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.value = 2600;
+    lp.frequency.value = 3400;
     const g = ctx.createGain();
-    g.gain.value = 0.7;
-    src.connect(sh).connect(lp).connect(g).connect(out);
-    return () => { sh.disconnect(); lp.disconnect(); g.disconnect(); };
+    g.gain.value = 0.5; // tame the boosted level
+    src.connect(pre).connect(sh).connect(lp).connect(g).connect(out);
+    return () => { pre.disconnect(); sh.disconnect(); lp.disconnect(); g.disconnect(); };
   },
   echo: (ctx, src, out) => {
     const d = ctx.createDelay(1.0);
@@ -205,8 +175,8 @@ const PHASE_BUILDERS: Record<string, PhaseBuilder> = {
     return () => { d.disconnect(); fb.disconnect(); wet.disconnect(); };
   },
   latency: (ctx, src, out) => {
-    const d = ctx.createDelay(2.0);
-    d.delayTime.value = 1.0;
+    const d = ctx.createDelay(4.0);
+    d.delayTime.value = 3.0;
     src.connect(d).connect(out);
     return () => d.disconnect();
   },

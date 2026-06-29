@@ -126,6 +126,20 @@ export function puzzleDuration(type: WhisperPuzzleType): number {
 }
 
 // ---------------------------------------------------------------------------
+// Level countdown (KTANE-style): one clock per level, errors burn it down
+// ---------------------------------------------------------------------------
+
+/** Seconds on the level countdown. Hit zero → the level fails and restarts. */
+export const LEVEL_TIME: Record<number, number> = { 1: 180, 2: 240, 3: 300 };
+export function levelTime(level: number): number {
+  return LEVEL_TIME[level] ?? 180;
+}
+/** Survivable wrong answers per level (they light the crosses); the NEXT one fails it. */
+export const MAX_STRIKES = 3;
+/** Seconds each wrong answer chips off the level countdown. */
+export const STRIKE_PENALTY_SEC = 15;
+
+// ---------------------------------------------------------------------------
 // Content banks (constant reference the operator reads from)
 // ---------------------------------------------------------------------------
 

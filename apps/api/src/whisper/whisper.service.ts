@@ -2,8 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { Namespace } from 'socket.io';
 import {
   LEVEL_PUZZLES,
+  MAX_STRIKES,
   PublicWhisperPlayer,
   PuzzleSlot,
+  STRIKE_PENALTY_SEC,
   TOTAL_LEVELS,
   WhisperCompletePayload,
   WhisperErrorPayload,
@@ -13,7 +15,7 @@ import {
   WhisperStatePayload,
   WhisperStatus,
   generateResultId,
-  puzzleDuration,
+  levelTime,
 } from '@shadyexperiments/shared';
 import { ServerPuzzleSlot, ServerWhisperRoom } from './whisper.types';
 import { WhisperResultsStore } from './whisper-results.store';
@@ -78,6 +80,9 @@ export class WhisperService {
         puzzles: [],
         startedAt: null,
         solvedTotal: 0,
+        levelDeadline: null,
+        strikes: 0,
+        levelFailReason: null,
       };
       this.rooms.set(roomId, room);
     }
@@ -142,7 +147,7 @@ export class WhisperService {
 
   ready(socketId: string): void {
     const room = this.findRoomBySocket(socketId);
-    if (!room || room.status === 'playing') return;
+    if (!room || (room.status !== 'waiting' && room.status !== 'ready')) return;
     const player = room.players.find((p) => p.socketId === socketId);
     if (!player) return;
 
@@ -166,6 +171,9 @@ export class WhisperService {
     room.puzzles = [];
     room.startedAt = null;
     room.solvedTotal = 0;
+    room.levelDeadline = null;
+    room.strikes = 0;
+    room.levelFailReason = null;
   }
 
   private startRun(room: ServerWhisperRoom): void {
@@ -179,10 +187,9 @@ export class WhisperService {
     this.logger.log(`run started ${room.id}`);
   }
 
-  /** Lay out a level's puzzle tabs with fresh seeds + countdown deadlines. */
+  /** Lay out a level's puzzle tabs with fresh seeds + start its countdown. */
   private buildLevel(room: ServerWhisperRoom, level: number): void {
     const defs = LEVEL_PUZZLES[level] ?? [];
-    const now = Date.now();
     room.puzzles = defs.map((d, i) => ({
       index: i,
       type: d.type,
@@ -190,8 +197,10 @@ export class WhisperService {
       title: d.title,
       seed: this.newSeed(room.id, level, i),
       solved: false,
-      deadline: now + puzzleDuration(d.type) * 1000,
+      deadline: null,
     }));
+    room.levelDeadline = Date.now() + levelTime(level) * 1000;
+    room.strikes = 0;
   }
 
   private newSeed(roomId: string, level: number, index: number): string {
@@ -221,21 +230,79 @@ export class WhisperService {
     room.solvedTotal += 1;
 
     if (room.puzzles.every((p) => p.solved)) {
-      this.advanceLevel(room);
+      if (room.level >= TOTAL_LEVELS) {
+        this.complete(room);
+      } else {
+        // Level cleared — pause and wait for the players to hit NEXT LEVEL.
+        room.status = 'cleared';
+        room.levelDeadline = null;
+        this.broadcastState(room);
+        this.logger.log(`level ${room.level} cleared ${room.id}`);
+      }
     } else {
       this.broadcastState(room);
     }
   }
 
-  private advanceLevel(room: ServerWhisperRoom): void {
-    if (room.level >= TOTAL_LEVELS) {
-      this.complete(room);
-      return;
-    }
+  /** Players hit NEXT LEVEL on the cleared screen — advance and resume play. */
+  next(socketId: string): void {
+    const room = this.findRoomBySocket(socketId);
+    if (!room || room.status !== 'cleared') return;
     room.level += 1;
     this.buildLevel(room, room.level);
+    room.status = 'playing';
+    this.ensureTicker();
     this.broadcastState(room);
     this.logger.log(`level ${room.level} ${room.id}`);
+  }
+
+  /** Players hit RETRY on the failed screen — restart the same level. */
+  retry(socketId: string): void {
+    const room = this.findRoomBySocket(socketId);
+    if (!room || room.status !== 'failed') return;
+    this.buildLevel(room, room.level);
+    room.status = 'playing';
+    room.levelFailReason = null;
+    this.ensureTicker();
+    this.broadcastState(room);
+    this.logger.log(`level ${room.level} retry ${room.id}`);
+  }
+
+  /**
+   * The hacker reports a *wrong* answer. KTANE rules: it's a strike — burn a few
+   * seconds off the level countdown. MAX_STRIKES errors are survivable (they light
+   * the crosses); the NEXT one (the 4th) — or the clock hitting zero — fails the
+   * level and restarts it.
+   */
+  failed(socketId: string, index: number, seed: string): void {
+    const room = this.findRoomBySocket(socketId);
+    if (!room || room.status !== 'playing') return;
+    const player = room.players.find((p) => p.socketId === socketId);
+    if (!player || player.role !== 'hacker') return; // only the hacker submits
+
+    const slot = room.puzzles[index];
+    if (!slot || slot.solved) return;
+    if (slot.seed !== seed) return; // stale report (raced a level restart)
+
+    room.strikes += 1;
+    if (room.levelDeadline !== null) room.levelDeadline -= STRIKE_PENALTY_SEC * 1000;
+
+    if (room.strikes > MAX_STRIKES) {
+      this.failLevel(room, 'strikes'); // the 4th strike is fatal
+    } else if (room.levelDeadline !== null && Date.now() >= room.levelDeadline) {
+      this.failLevel(room, 'timeout');
+    } else {
+      this.broadcastState(room);
+    }
+  }
+
+  /** A level ran out of time or strikes: pause on the failed screen, await RETRY. */
+  private failLevel(room: ServerWhisperRoom, reason: 'timeout' | 'strikes'): void {
+    room.status = 'failed';
+    room.levelFailReason = reason;
+    room.levelDeadline = null;
+    this.broadcastState(room);
+    this.logger.log(`level ${room.level} failed (${reason}); awaiting retry ${room.id}`);
   }
 
   private complete(room: ServerWhisperRoom): void {
@@ -268,7 +335,7 @@ export class WhisperService {
   }
 
   // --------------------------------------------------------------------------
-  // Reseed timer
+  // Level countdown sweep
   // --------------------------------------------------------------------------
 
   private ensureTicker(): void {
@@ -284,15 +351,9 @@ export class WhisperService {
     for (const room of this.rooms.values()) {
       if (room.status !== 'playing') continue;
       anyPlaying = true;
-      let changed = false;
-      for (const slot of room.puzzles) {
-        if (!slot.solved && slot.deadline !== null && now >= slot.deadline) {
-          slot.seed = this.newSeed(room.id, room.level, slot.index);
-          slot.deadline = now + puzzleDuration(slot.type) * 1000;
-          changed = true;
-        }
+      if (room.levelDeadline !== null && now >= room.levelDeadline) {
+        this.failLevel(room, 'timeout');
       }
-      if (changed) this.broadcastState(room);
     }
     if (!anyPlaying && this.ticker) {
       clearInterval(this.ticker);
@@ -327,7 +388,12 @@ export class WhisperService {
   }
 
   private recomputeStatus(room: ServerWhisperRoom): WhisperStatus {
-    if (room.status === 'playing' || room.status === 'complete') {
+    if (
+      room.status === 'playing' ||
+      room.status === 'complete' ||
+      room.status === 'cleared' ||
+      room.status === 'failed'
+    ) {
       return room.status; // driven explicitly
     }
     const everyoneReady =
@@ -373,6 +439,10 @@ export class WhisperService {
         totalLevels: TOTAL_LEVELS,
         puzzles,
         startedAt: room.startedAt,
+        levelDeadline: room.levelDeadline,
+        strikes: room.strikes,
+        maxStrikes: MAX_STRIKES,
+        levelFailReason: room.levelFailReason,
       };
       this.server.to(p.socketId).emit(WhisperEvents.RoomState, payload);
     }

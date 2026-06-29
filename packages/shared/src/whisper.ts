@@ -23,6 +23,8 @@ export type WhisperStatus =
   | 'waiting' // fewer than 2 players, or not everyone ready
   | 'ready' // 2 players, both ready - about to start
   | 'playing' // run in progress
+  | 'cleared' // a level was just cleared; awaiting NEXT LEVEL
+  | 'failed' // a level just failed; awaiting RETRY
   | 'complete'; // all levels cleared
 
 /** A player as exposed to clients (no socket internals). */
@@ -59,8 +61,11 @@ export const WhisperEvents = {
   RoomJoin: 'wh:join',
   RoomReady: 'wh:ready',
   RoomRematch: 'wh:rematch',
+  RoomNext: 'wh:next',
+  RoomRetry: 'wh:retry',
   WebrtcSignal: 'wh:webrtc:signal',
   PuzzleSolved: 'wh:solved',
+  PuzzleFailed: 'wh:failed',
   // server -> client
   RoomState: 'wh:state',
   RoomError: 'wh:error',
@@ -82,6 +87,12 @@ export interface PuzzleSolvedPayload {
   seed: string;
 }
 
+/**
+ * Same shape as {@link PuzzleSolvedPayload}: the hacker reports a *wrong* answer.
+ * It costs a strike + seconds off the level countdown (see the server's `failed`).
+ */
+export type PuzzleFailedPayload = PuzzleSolvedPayload;
+
 // ---- server -> client payloads ----
 
 export interface WhisperStatePayload {
@@ -96,10 +107,18 @@ export interface WhisperStatePayload {
   /** Current level (1-based); drives audio degradation + accent color. */
   level: number;
   totalLevels: number;
-  /** The current level's puzzle tabs (with seeds/solved/deadlines). */
+  /** The current level's puzzle tabs (with seeds/solved). */
   puzzles: PuzzleSlot[];
   /** Server epoch ms when play started (for the run timer); null until playing. */
   startedAt: number | null;
+  /** Epoch ms the level countdown hits zero (then the level fails); null in lobby. */
+  levelDeadline: number | null;
+  /** Wrong answers made this level. */
+  strikes: number;
+  /** Survivable wrong answers before the level fails. */
+  maxStrikes: number;
+  /** If the level just failed, why (drives the LEVEL FAILED screen); null otherwise. */
+  levelFailReason: 'timeout' | 'strikes' | null;
 }
 
 export interface WhisperErrorPayload {
@@ -141,6 +160,9 @@ export interface WhisperClientToServerEvents {
   [WhisperEvents.RoomJoin]: (p: WhisperJoinPayload) => void;
   [WhisperEvents.RoomReady]: () => void;
   [WhisperEvents.RoomRematch]: () => void;
+  [WhisperEvents.RoomNext]: () => void;
+  [WhisperEvents.RoomRetry]: () => void;
   [WhisperEvents.WebrtcSignal]: (p: WebrtcSignalPayload) => void;
   [WhisperEvents.PuzzleSolved]: (p: PuzzleSolvedPayload) => void;
+  [WhisperEvents.PuzzleFailed]: (p: PuzzleFailedPayload) => void;
 }

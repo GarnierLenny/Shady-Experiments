@@ -11,6 +11,7 @@ import {
 } from '@nestjs/websockets';
 import { Namespace, Socket } from 'socket.io';
 import {
+  PuzzleFailedPayload,
   PuzzleSolvedPayload,
   WebrtcSignalPayload,
   WhisperEvents,
@@ -118,6 +119,16 @@ export class WhisperGateway
     this.whisper.rematch(client.id);
   }
 
+  @SubscribeMessage(WhisperEvents.RoomNext)
+  onNext(@ConnectedSocket() client: Socket): void {
+    this.whisper.next(client.id);
+  }
+
+  @SubscribeMessage(WhisperEvents.RoomRetry)
+  onRetry(@ConnectedSocket() client: Socket): void {
+    this.whisper.retry(client.id);
+  }
+
   @SubscribeMessage(WhisperEvents.WebrtcSignal)
   onSignal(
     @ConnectedSocket() client: Socket,
@@ -138,6 +149,19 @@ export class WhisperGateway
     const seed = String(body.seed ?? '').slice(0, 120);
     if (idx < 0 || !seed) return;
     this.whisper.solved(client.id, idx, seed);
+  }
+
+  @SubscribeMessage(WhisperEvents.PuzzleFailed)
+  onFailed(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: PuzzleFailedPayload,
+  ): void {
+    if (!this.underRate(client.id)) return;
+    if (!body) return;
+    const idx = Number.isInteger(body.index) ? body.index : -1;
+    const seed = String(body.seed ?? '').slice(0, 120);
+    if (idx < 0 || !seed) return;
+    this.whisper.failed(client.id, idx, seed);
   }
 
   // --------------------------------------------------------------------------
