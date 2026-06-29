@@ -17,7 +17,7 @@ export type WhisperSocket = Socket<
  */
 export function createWhisperSocket(): WhisperSocket {
   return io(`${socketUrl()}/whisper`, {
-    transports: ['websocket'],
+    transports: ['websocket', 'polling'],
     autoConnect: true,
     reconnection: true,
   });

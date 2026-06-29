@@ -39,8 +39,21 @@ export function useMic(active = true): MicState {
     let cancelled = false;
     let local: MediaStream | null = null;
 
-    navigator.mediaDevices
-      ?.getUserMedia({
+    const md = navigator.mediaDevices;
+    if (!md?.getUserMedia) {
+      // Insecure origin (http://<lan-ip>) or unsupported browser: getUserMedia is
+      // absent. Bail with a clear message instead of throwing `.then` on undefined.
+      setError(
+        typeof window !== 'undefined' && !window.isSecureContext
+          ? 'Microphone needs a secure (https) connection.'
+          : 'This browser can’t access the microphone.',
+      );
+      setErrorKind('other');
+      return;
+    }
+
+    md
+      .getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,

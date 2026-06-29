@@ -96,13 +96,14 @@ export function useVoice(
   useEffect(() => {
     if (!socket) return;
     const onSignal = (p: { signal: unknown }) => {
-      if (peerRef.current) {
+      const peer = peerRef.current;
+      if (peer && !peer.destroyed) {
         try {
-          peerRef.current.signal(p.signal);
+          peer.signal(p.signal);
         } catch {
-          /* malformed signal - ignore */
+          /* malformed / stale signal - ignore */
         }
-      } else {
+      } else if (!peer) {
         queueRef.current.push(p.signal);
       }
     };
@@ -121,16 +122,27 @@ export function useVoice(
     setError(null);
 
     (async () => {
-      await import('@/lib/peer-polyfill');
-      const SimplePeer = (await import('simple-peer')).default;
-      if (destroyed) return;
-
-      const peer = new SimplePeer({
-        initiator,
-        stream: localStream,
-        trickle: true,
-        config: { iceServers: iceServers() },
-      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let peer: any;
+      try {
+        await import('@/lib/peer-polyfill');
+        const SimplePeer = (await import('simple-peer')).default;
+        if (destroyed) return;
+        peer = new SimplePeer({
+          initiator,
+          stream: localStream,
+          trickle: true,
+          config: { iceServers: iceServers() },
+        });
+      } catch (e) {
+        // Import failure, constructor throw, or addTrack on an ended track —
+        // surface a recoverable failure instead of an unhandled rejection.
+        if (!destroyed) {
+          setError(e instanceof Error ? e.message : 'voice setup failed');
+          setStatus(connectedOnceRef.current ? 'reconnecting' : 'failed');
+        }
+        return;
+      }
       peerRef.current = peer;
 
       timeoutRef.current = window.setTimeout(() => {
@@ -188,6 +200,7 @@ export function useVoice(
 
       // Flush any signals that arrived before the peer existed.
       queueRef.current.forEach((sig) => {
+        if (peer.destroyed) return;
         try {
           peer.signal(sig as Parameters<typeof peer.signal>[0]);
         } catch {
