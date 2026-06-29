@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import { Space_Grotesk, IBM_Plex_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { TrackPageView } from "@/components/TrackPageView";
 
-// Space Grotesk Bold for the rare title. IBM Plex Mono for absolutely
-// everything else — body, data, labels, buttons, metadata.
+// Space Grotesk Bold for titles. IBM Plex Mono for data, labels and metadata.
+// Inter for running body copy (the lobby's subtitle and dossier blurbs).
 const display = Space_Grotesk({
   subsets: ["latin"],
   weight: ["700"],
@@ -17,6 +17,12 @@ const mono = IBM_Plex_Mono({
   variable: "--font-plex-mono",
   display: "swap",
 });
+const body = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "ShadyExperiments",
@@ -27,7 +33,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="fr" className={`${display.variable} ${mono.variable}`}>
+    <html
+      lang="fr"
+      className={`${display.variable} ${mono.variable} ${body.variable}`}
+    >
       <body>
         <TrackPageView />
         {children}
