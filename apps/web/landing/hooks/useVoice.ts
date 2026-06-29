@@ -13,7 +13,7 @@ export interface VoiceState {
   remoteStream: MediaStream | null;
   error: string | null;
   status: VoiceStatus;
-  /** Tear down and reconnect from scratch (full re-handshake via reload). */
+  /** Force an in-place voice re-handshake (no page reload). */
   retry: () => void;
 }
 
@@ -36,6 +36,7 @@ export function useVoice(
   socket: WhisperSocket | null,
   localStream: MediaStream | null,
   initiator: boolean | null,
+  handshakeGen: number,
 ): VoiceState {
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,15 +52,28 @@ export function useVoice(
   const iceGraceRef = useRef<number | null>(null);
   const connectedOnceRef = useRef(false);
   const dropTrackedRef = useRef(false);
+  // Latest socket, so retry()/recovery can emit without living inside the effect.
+  const socketRef = useRef<WhisperSocket | null>(socket);
+  socketRef.current = socket;
+  // Ask the server for a re-handshake at most once per drop.
+  const lostSentRef = useRef(false);
 
   // Report the connection outcome once per mount (a retry reloads the page).
   const outcomeTrackedRef = useRef(false);
   useEffect(() => {
-    // A post-connect drop is its own signal (once) — today the only telemetry
-    // that a voice link died after going live.
-    if (status === 'reconnecting' && !dropTrackedRef.current) {
-      dropTrackedRef.current = true;
-      track('whisperinghacker', 'voice_dropped', { usedTurn: hasTurn() });
+    if (status === 'reconnecting') {
+      // A post-connect drop is its own signal (once per drop).
+      if (!dropTrackedRef.current) {
+        dropTrackedRef.current = true;
+        track('whisperinghacker', 'voice_dropped', { usedTurn: hasTurn() });
+      }
+      // Ask the server to re-issue WebRTC roles so both sides rebuild the peer.
+      if (!lostSentRef.current) {
+        lostSentRef.current = true;
+        socketRef.current?.emit(WhisperEvents.VoiceLost);
+      }
+    } else if (status === 'connected') {
+      lostSentRef.current = false;
     }
     if (outcomeTrackedRef.current) return;
     if (status === 'connected') {
@@ -114,7 +128,7 @@ export function useVoice(
       const peer = new SimplePeer({
         initiator,
         stream: localStream,
-        trickle: false,
+        trickle: true,
         config: { iceServers: iceServers() },
       });
       peerRef.current = peer;
@@ -192,6 +206,7 @@ export function useVoice(
       }
       connectedOnceRef.current = false;
       dropTrackedRef.current = false;
+      queueRef.current = []; // a rebuild starts fresh — drop stale signals
       if (peerRef.current) {
         try {
           peerRef.current.destroy();
@@ -203,10 +218,20 @@ export function useVoice(
       setRemoteStream(null);
       setStatus('idle');
     };
-  }, [socket, localStream, initiator, clearTimer]);
+    // `handshakeGen` bumps on every WebrtcInit (initial + re-handshakes): the
+    // cleanup tears down the old peer and this effect rebuilds a fresh one.
+  }, [socket, localStream, initiator, handshakeGen, clearTimer]);
 
   const retry = useCallback(() => {
-    if (typeof window !== 'undefined') window.location.reload();
+    // Prefer an in-place re-handshake (keeps the socket + run alive); only fall
+    // back to a full reload if the socket is somehow gone.
+    const s = socketRef.current;
+    if (s) {
+      lostSentRef.current = false;
+      s.emit(WhisperEvents.VoiceLost);
+    } else if (typeof window !== 'undefined') {
+      window.location.reload();
+    }
   }, []);
 
   return { remoteStream, error, status, retry };

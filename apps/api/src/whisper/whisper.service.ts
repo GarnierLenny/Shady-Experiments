@@ -91,6 +91,7 @@ export class WhisperService {
         frozenRemainingMs: null,
         strikes: 0,
         levelFailReason: null,
+        lastRehandshakeAt: 0,
       };
       this.rooms.set(roomId, room);
     }
@@ -107,6 +108,8 @@ export class WhisperService {
       existing.connected = true;
       if (name) existing.name = safeName;
       this.maybeResumeCountdown(room);
+      // The reconnecting socket's voice peer is dead — rebuild it on both sides.
+      this.triggerRehandshake(room);
     } else {
       // First in is the hacker (and WebRTC initiator); second is the operator.
       const role: WhisperRole =
@@ -468,6 +471,28 @@ export class WhisperService {
         .to(other.socketId)
         .emit(WhisperEvents.WebrtcSignal, { signal });
     }
+  }
+
+  /** Re-issue WebRTC roles to both peers so a dropped voice link can re-handshake. */
+  private triggerRehandshake(room: ServerWhisperRoom): void {
+    if (room.players.length < MAX_PLAYERS) return;
+    if (!room.players.every((p) => p.connected)) return;
+    const now = Date.now();
+    if (now - room.lastRehandshakeAt < 3000) return; // throttle storms
+    room.lastRehandshakeAt = now;
+    this.server
+      .to(room.players[0].socketId)
+      .emit(WhisperEvents.WebrtcInit, { initiator: true });
+    this.server
+      .to(room.players[1].socketId)
+      .emit(WhisperEvents.WebrtcInit, { initiator: false });
+    this.logger.log(`re-handshake ${room.id}`);
+  }
+
+  /** A client reported its voice link dropped — coordinate a fresh handshake. */
+  requestRehandshake(socketId: string): void {
+    const room = this.findRoomBySocket(socketId);
+    if (room) this.triggerRehandshake(room);
   }
 
   // --------------------------------------------------------------------------

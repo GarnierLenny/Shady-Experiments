@@ -48,4 +48,6 @@ export interface ServerWhisperRoom {
   strikes: number;
   /** If status is 'failed', why; null otherwise. */
   levelFailReason: 'timeout' | 'strikes' | null;
+  /** Epoch ms of the last re-handshake broadcast (throttles voice re-negotiation). */
+  lastRehandshakeAt: number;
 }

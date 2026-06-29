@@ -66,6 +66,7 @@ export const WhisperEvents = {
   WebrtcSignal: 'wh:webrtc:signal',
   PuzzleSolved: 'wh:solved',
   PuzzleFailed: 'wh:failed',
+  VoiceLost: 'wh:voice:lost',
   // server -> client
   RoomState: 'wh:state',
   RoomError: 'wh:error',
@@ -172,4 +173,5 @@ export interface WhisperClientToServerEvents {
   [WhisperEvents.WebrtcSignal]: (p: WebrtcSignalPayload) => void;
   [WhisperEvents.PuzzleSolved]: (p: PuzzleSolvedPayload) => void;
   [WhisperEvents.PuzzleFailed]: (p: PuzzleFailedPayload) => void;
+  [WhisperEvents.VoiceLost]: () => void;
 }

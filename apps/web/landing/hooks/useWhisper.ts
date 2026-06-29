@@ -24,6 +24,8 @@ export interface WhisperState {
   full: boolean;
   error: WhisperErrorPayload | null;
   initiator: boolean | null;
+  /** Bumps on every WebrtcInit (initial + re-handshakes) so the voice peer rebuilds. */
+  handshakeGen: number;
   /** Current level (1-based). */
   level: number;
   totalLevels: number;
@@ -67,6 +69,7 @@ export function useWhisper(roomId: string, name: string): WhisperState {
   const [full, setFull] = useState(false);
   const [error, setError] = useState<WhisperErrorPayload | null>(null);
   const [initiator, setInitiator] = useState<boolean | null>(null);
+  const [handshakeGen, setHandshakeGen] = useState(0);
   const [level, setLevel] = useState(1);
   const [totalLevels, setTotalLevels] = useState(1);
   const [puzzles, setPuzzles] = useState<PuzzleSlot[]>([]);
@@ -118,7 +121,10 @@ export function useWhisper(roomId: string, name: string): WhisperState {
     });
 
     socket.on(WhisperEvents.RoomError, (e) => setError(e));
-    socket.on(WhisperEvents.WebrtcInit, (p) => setInitiator(p.initiator));
+    socket.on(WhisperEvents.WebrtcInit, (p) => {
+      setInitiator(p.initiator);
+      setHandshakeGen((g) => g + 1);
+    });
 
     socket.on(WhisperEvents.GameComplete, (p) => {
       setResult(p);
@@ -172,6 +178,7 @@ export function useWhisper(roomId: string, name: string): WhisperState {
     full,
     error,
     initiator,
+    handshakeGen,
     level,
     totalLevels,
     puzzles,

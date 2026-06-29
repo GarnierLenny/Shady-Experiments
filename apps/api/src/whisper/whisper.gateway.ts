@@ -169,6 +169,12 @@ export class WhisperGateway
     this.whisper.failed(client.id, idx, seed);
   }
 
+  @SubscribeMessage(WhisperEvents.VoiceLost)
+  onVoiceLost(@ConnectedSocket() client: Socket): void {
+    if (!this.underRate(client.id)) return;
+    this.whisper.requestRehandshake(client.id);
+  }
+
   // --------------------------------------------------------------------------
   // Abuse guards (mirrors LobbyGateway)
   // --------------------------------------------------------------------------

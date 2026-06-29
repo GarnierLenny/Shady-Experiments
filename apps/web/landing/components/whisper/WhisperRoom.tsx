@@ -52,7 +52,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
 export function WhisperRoom({ roomId, name }: { roomId: string; name: string }) {
   const mic = useMic(true);
   const wh = useWhisper(roomId, name);
-  const voice = useVoice(wh.socket, mic.stream, wh.initiator);
+  const voice = useVoice(wh.socket, mic.stream, wh.initiator, wh.handshakeGen);
 
   // Degradation chain: connect the received voice, re-tune by level.
   const chainRef = useRef<DisturbanceChain | null>(null);
