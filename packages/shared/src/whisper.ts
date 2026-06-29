@@ -66,6 +66,7 @@ export const WhisperEvents = {
   WebrtcSignal: 'wh:webrtc:signal',
   PuzzleSolved: 'wh:solved',
   PuzzleFailed: 'wh:failed',
+  VoiceLost: 'wh:voice:lost',
   // server -> client
   RoomState: 'wh:state',
   RoomError: 'wh:error',
@@ -78,6 +79,11 @@ export const WhisperEvents = {
 export interface WhisperJoinPayload {
   roomId: string;
   name: string;
+  /**
+   * Durable per-browser id (persisted client-side). Lets the server reclaim a
+   * player's seat across a socket reconnect instead of seating them anew.
+   */
+  sessionId: string;
 }
 
 export interface PuzzleSolvedPayload {
@@ -113,6 +119,8 @@ export interface WhisperStatePayload {
   startedAt: number | null;
   /** Epoch ms the level countdown hits zero (then the level fails); null in lobby. */
   levelDeadline: number | null;
+  /** Frozen countdown remainder (ms) while a player is disconnected; null when running. */
+  frozenRemainingMs: number | null;
   /** Wrong answers made this level. */
   strikes: number;
   /** Survivable wrong answers before the level fails. */
@@ -165,4 +173,5 @@ export interface WhisperClientToServerEvents {
   [WhisperEvents.WebrtcSignal]: (p: WebrtcSignalPayload) => void;
   [WhisperEvents.PuzzleSolved]: (p: PuzzleSolvedPayload) => void;
   [WhisperEvents.PuzzleFailed]: (p: PuzzleFailedPayload) => void;
+  [WhisperEvents.VoiceLost]: () => void;
 }

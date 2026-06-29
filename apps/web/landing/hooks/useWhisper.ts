@@ -11,6 +11,7 @@ import {
   WhisperStatus,
 } from '@shadyexperiments/shared';
 import { createWhisperSocket, WhisperSocket } from '@/lib/whisper-socket';
+import { clientSessionId } from '@/lib/whisper-session';
 import { track } from '@/lib/track';
 
 export interface WhisperState {
@@ -23,6 +24,8 @@ export interface WhisperState {
   full: boolean;
   error: WhisperErrorPayload | null;
   initiator: boolean | null;
+  /** Bumps on every WebrtcInit (initial + re-handshakes) so the voice peer rebuilds. */
+  handshakeGen: number;
   /** Current level (1-based). */
   level: number;
   totalLevels: number;
@@ -32,6 +35,8 @@ export interface WhisperState {
   result: WhisperCompletePayload | null;
   /** Epoch ms the level countdown hits zero; null in lobby. */
   levelDeadline: number | null;
+  /** Frozen countdown remainder (ms) while a player is disconnected; null when running. */
+  frozenRemainingMs: number | null;
   /** Wrong answers made this level, and the cap before it fails. */
   strikes: number;
   maxStrikes: number;
@@ -64,12 +69,14 @@ export function useWhisper(roomId: string, name: string): WhisperState {
   const [full, setFull] = useState(false);
   const [error, setError] = useState<WhisperErrorPayload | null>(null);
   const [initiator, setInitiator] = useState<boolean | null>(null);
+  const [handshakeGen, setHandshakeGen] = useState(0);
   const [level, setLevel] = useState(1);
   const [totalLevels, setTotalLevels] = useState(1);
   const [puzzles, setPuzzles] = useState<PuzzleSlot[]>([]);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [result, setResult] = useState<WhisperCompletePayload | null>(null);
   const [levelDeadline, setLevelDeadline] = useState<number | null>(null);
+  const [frozenRemainingMs, setFrozenRemainingMs] = useState<number | null>(null);
   const [strikes, setStrikes] = useState(0);
   const [maxStrikes, setMaxStrikes] = useState(3);
   const [levelFailReason, setLevelFailReason] = useState<'timeout' | 'strikes' | null>(null);
@@ -80,9 +87,10 @@ export function useWhisper(roomId: string, name: string): WhisperState {
     const socket = createWhisperSocket();
     socketRef.current = socket;
 
+    const sessionId = clientSessionId();
     socket.on('connect', () => {
       setConnected(true);
-      socket.emit(WhisperEvents.RoomJoin, { roomId, name });
+      socket.emit(WhisperEvents.RoomJoin, { roomId, name, sessionId });
     });
     socket.on('disconnect', () => setConnected(false));
 
@@ -97,6 +105,7 @@ export function useWhisper(roomId: string, name: string): WhisperState {
       setPuzzles(s.puzzles);
       setStartedAt(s.startedAt);
       setLevelDeadline(s.levelDeadline);
+      setFrozenRemainingMs(s.frozenRemainingMs);
       setStrikes(s.strikes);
       setMaxStrikes(s.maxStrikes);
       setLevelFailReason(s.levelFailReason);
@@ -112,7 +121,10 @@ export function useWhisper(roomId: string, name: string): WhisperState {
     });
 
     socket.on(WhisperEvents.RoomError, (e) => setError(e));
-    socket.on(WhisperEvents.WebrtcInit, (p) => setInitiator(p.initiator));
+    socket.on(WhisperEvents.WebrtcInit, (p) => {
+      setInitiator(p.initiator);
+      setHandshakeGen((g) => g + 1);
+    });
 
     socket.on(WhisperEvents.GameComplete, (p) => {
       setResult(p);
@@ -166,12 +178,14 @@ export function useWhisper(roomId: string, name: string): WhisperState {
     full,
     error,
     initiator,
+    handshakeGen,
     level,
     totalLevels,
     puzzles,
     startedAt,
     result,
     levelDeadline,
+    frozenRemainingMs,
     strikes,
     maxStrikes,
     levelFailReason,

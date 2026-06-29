@@ -20,7 +20,7 @@ const LEVELS = [1, 2, 3];
 export function VoiceLab({ room, name }: { room: string; name: string }) {
   const mic = useMic(true);
   const wh = useWhisper(room, name);
-  const voice = useVoice(wh.socket, mic.stream, wh.initiator);
+  const voice = useVoice(wh.socket, mic.stream, wh.initiator, wh.handshakeGen);
 
   const chainRef = useRef<DisturbanceChain | null>(null);
   const [phase, setPhase] = useState('whisper');

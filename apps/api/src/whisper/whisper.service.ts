@@ -23,6 +23,8 @@ import { WhisperResultsStore } from './whisper-results.store';
 const MAX_PLAYERS = 2;
 /** How often the reseed timer sweeps active rooms. */
 const TICK_MS = 1000;
+/** Grace window for a mid-run disconnect before the seat is evicted and the run voided. */
+const DISCONNECT_GRACE_MS = 25000;
 
 /**
  * Owns all whisper room state and progression. The server is the source of truth
@@ -33,6 +35,11 @@ const TICK_MS = 1000;
 @Injectable()
 export class WhisperService {
   private readonly logger = new Logger(WhisperService.name);
+  // NOTE: rooms live in process memory only. A redeploy or a second instance
+  // drops every active pair (handleDisconnect -> grace -> evict), and two peers on
+  // different instances never share a room or relayed signals. For multi-instance
+  // or zero-downtime deploys, add the socket.io Redis adapter + sticky sessions and
+  // move room state to Redis. Single-instance is fine for now — gate deploys.
   private readonly rooms = new Map<string, ServerWhisperRoom>();
   /** The `/whisper` namespace, bound from the gateway's afterInit. */
   private server!: Namespace;
@@ -51,10 +58,11 @@ export class WhisperService {
   join(
     roomId: string,
     name: string,
+    sessionId: string,
     socketId: string,
   ): WhisperErrorPayload | null {
     let room = this.rooms.get(roomId);
-    const existing = room?.players.find((p) => p.socketId === socketId);
+    const existing = room?.players.find((p) => p.sessionId === sessionId);
 
     if (room && !existing) {
       if (room.players.length >= MAX_PLAYERS) {
@@ -63,7 +71,11 @@ export class WhisperService {
           message: 'This room already has a hacker and an operator.',
         };
       }
-      if (room.status === 'playing') {
+      if (
+        room.status === 'playing' ||
+        room.status === 'cleared' ||
+        room.status === 'failed'
+      ) {
         return {
           code: 'in_progress',
           message: 'A run is already underway in this room.',
@@ -81,33 +93,47 @@ export class WhisperService {
         startedAt: null,
         solvedTotal: 0,
         levelDeadline: null,
+        frozenRemainingMs: null,
         strikes: 0,
         levelFailReason: null,
+        lastRehandshakeAt: 0,
       };
       this.rooms.set(roomId, room);
     }
 
     const safeName = (name || '').slice(0, 24) || 'Anonymous';
     if (existing) {
+      // Reconnect: rebind the socket, cancel any pending eviction, mark present,
+      // and resume the frozen clock once everyone is back.
+      if (existing.graceTimer) {
+        clearTimeout(existing.graceTimer);
+        existing.graceTimer = null;
+      }
+      existing.socketId = socketId;
       existing.connected = true;
       if (name) existing.name = safeName;
+      this.maybeResumeCountdown(room);
+      // The reconnecting socket's voice peer is dead — rebuild it on both sides.
+      this.triggerRehandshake(room);
     } else {
       // First in is the hacker (and WebRTC initiator); second is the operator.
       const role: WhisperRole =
         room.players.length === 0 ? 'hacker' : 'operator';
       room.players.push({
+        sessionId,
         socketId,
         name: safeName,
         role,
         ready: false,
         connected: true,
+        graceTimer: null,
       });
     }
 
     this.recomputeStatus(room);
     this.broadcastState(room);
 
-    // When the second player arrives, assign WebRTC roles exactly once.
+    // When the second player first arrives, assign WebRTC roles exactly once.
     if (!existing && room.players.length === MAX_PLAYERS) {
       this.server
         .to(room.players[0].socketId)
@@ -117,28 +143,99 @@ export class WhisperService {
         .emit(WhisperEvents.WebrtcInit, { initiator: false });
     }
 
-    this.logger.log(`join ${socketId} -> ${roomId} (${room.players.length}/2)`);
+    this.logger.log(
+      `join ${socketId} -> ${roomId} (${room.players.length}/2)${existing ? ' [resume]' : ''}`,
+    );
     return null;
   }
 
   handleDisconnect(socketId: string): void {
     const room = this.findRoomBySocket(socketId);
     if (!room) return;
+    const player = room.players.find((p) => p.socketId === socketId);
+    if (!player) return;
 
-    room.players = room.players.filter((p) => p.socketId !== socketId);
+    const runInProgress =
+      room.status === 'playing' ||
+      room.status === 'cleared' ||
+      room.status === 'failed';
+
+    if (!runInProgress) {
+      // In the lobby a drop just frees the seat (and re-seats roles by order).
+      this.removePlayer(room, player.sessionId);
+      return;
+    }
+
+    // Mid-run: keep the seat, freeze the clock, and start a grace window so a
+    // transient blip (WiFi, tab sleep, reconnect) doesn't void the partner's run.
+    player.connected = false;
+    if (player.graceTimer) clearTimeout(player.graceTimer);
+    this.freezeCountdown(room);
+    player.graceTimer = setTimeout(
+      () => this.evict(room.id, player.sessionId),
+      DISCONNECT_GRACE_MS,
+    );
+    if (typeof player.graceTimer.unref === 'function') player.graceTimer.unref();
+    this.broadcastState(room);
+    this.logger.log(`disconnect ${socketId}; ${DISCONNECT_GRACE_MS}ms grace ${room.id}`);
+  }
+
+  /** Immediate seat removal (lobby drop): re-seat roles by order, drop empty rooms. */
+  private removePlayer(room: ServerWhisperRoom, sessionId: string): void {
+    const leaving = room.players.find((p) => p.sessionId === sessionId);
+    if (leaving?.graceTimer) clearTimeout(leaving.graceTimer);
+    room.players = room.players.filter((p) => p.sessionId !== sessionId);
     if (room.players.length === 0) {
       this.rooms.delete(room.id);
       return;
     }
+    room.players.forEach((p, i) => {
+      p.role = i === 0 ? 'hacker' : 'operator';
+      p.ready = false;
+    });
+    this.broadcastState(room);
+  }
 
-    // Co-op: a partner leaving voids the run. Drop back to the waiting room and
-    // re-seat roles by order so the survivor becomes the hacker if needed.
+  /** Grace window elapsed without a rejoin: a partner truly left — void the run. */
+  private evict(roomId: string, sessionId: string): void {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+    const player = room.players.find((p) => p.sessionId === sessionId);
+    if (!player || player.connected) return; // returned in time
+    player.graceTimer = null;
+    room.players = room.players.filter((p) => p.sessionId !== sessionId);
+    if (room.players.length === 0) {
+      this.rooms.delete(roomId);
+      return;
+    }
+    // Co-op can't continue solo: drop back to the lobby and re-seat the survivor.
     this.resetToLobby(room);
     room.players.forEach((p, i) => {
       p.role = i === 0 ? 'hacker' : 'operator';
       p.ready = false;
     });
     this.broadcastState(room);
+    this.logger.log(`evicted ${sessionId.slice(0, 8)} after grace ${roomId}`);
+  }
+
+  /** Freeze the level countdown while a player is away (the clock must not bleed). */
+  private freezeCountdown(room: ServerWhisperRoom): void {
+    if (room.status !== 'playing' || room.levelDeadline === null) return;
+    room.frozenRemainingMs = Math.max(0, room.levelDeadline - Date.now());
+    room.levelDeadline = null;
+  }
+
+  /** Resume the frozen countdown once everyone is back and the run is live. */
+  private maybeResumeCountdown(room: ServerWhisperRoom): void {
+    if (
+      room.status === 'playing' &&
+      room.frozenRemainingMs !== null &&
+      room.players.every((p) => p.connected)
+    ) {
+      room.levelDeadline = Date.now() + room.frozenRemainingMs;
+      room.frozenRemainingMs = null;
+      this.ensureTicker();
+    }
   }
 
   // --------------------------------------------------------------------------
@@ -172,8 +269,12 @@ export class WhisperService {
     room.startedAt = null;
     room.solvedTotal = 0;
     room.levelDeadline = null;
+    room.frozenRemainingMs = null;
     room.strikes = 0;
     room.levelFailReason = null;
+    // Leave any pending grace timers running: each disconnected player's own
+    // timer still fires and evicts them, so a both-players-dropped race can't
+    // strand a ghost seat after one of them is voided.
   }
 
   private startRun(room: ServerWhisperRoom): void {
@@ -200,6 +301,7 @@ export class WhisperService {
       deadline: null,
     }));
     room.levelDeadline = Date.now() + levelTime(level) * 1000;
+    room.frozenRemainingMs = null;
     room.strikes = 0;
   }
 
@@ -376,6 +478,28 @@ export class WhisperService {
     }
   }
 
+  /** Re-issue WebRTC roles to both peers so a dropped voice link can re-handshake. */
+  private triggerRehandshake(room: ServerWhisperRoom): void {
+    if (room.players.length < MAX_PLAYERS) return;
+    if (!room.players.every((p) => p.connected)) return;
+    const now = Date.now();
+    if (now - room.lastRehandshakeAt < 3000) return; // throttle storms
+    room.lastRehandshakeAt = now;
+    this.server
+      .to(room.players[0].socketId)
+      .emit(WhisperEvents.WebrtcInit, { initiator: true });
+    this.server
+      .to(room.players[1].socketId)
+      .emit(WhisperEvents.WebrtcInit, { initiator: false });
+    this.logger.log(`re-handshake ${room.id}`);
+  }
+
+  /** A client reported its voice link dropped — coordinate a fresh handshake. */
+  requestRehandshake(socketId: string): void {
+    const room = this.findRoomBySocket(socketId);
+    if (room) this.triggerRehandshake(room);
+  }
+
   // --------------------------------------------------------------------------
   // Helpers
   // --------------------------------------------------------------------------
@@ -440,6 +564,7 @@ export class WhisperService {
         puzzles,
         startedAt: room.startedAt,
         levelDeadline: room.levelDeadline,
+        frozenRemainingMs: room.frozenRemainingMs,
         strikes: room.strikes,
         maxStrikes: MAX_STRIKES,
         levelFailReason: room.levelFailReason,
