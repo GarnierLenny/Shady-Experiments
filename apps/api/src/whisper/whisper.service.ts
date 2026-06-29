@@ -319,6 +319,7 @@ export class WhisperService {
   solved(socketId: string, index: number, seed: string): void {
     const room = this.findRoomBySocket(socketId);
     if (!room || room.status !== 'playing') return;
+    if (!this.everyonePresent(room)) return; // pause progression while a seat is in grace
     const player = room.players.find((p) => p.socketId === socketId);
     if (!player || player.role !== 'hacker') return; // only the hacker solves
 
@@ -350,6 +351,7 @@ export class WhisperService {
   next(socketId: string): void {
     const room = this.findRoomBySocket(socketId);
     if (!room || room.status !== 'cleared') return;
+    if (!this.everyonePresent(room)) return; // wait for the partner to return
     room.level += 1;
     this.buildLevel(room, room.level);
     room.status = 'playing';
@@ -362,6 +364,7 @@ export class WhisperService {
   retry(socketId: string): void {
     const room = this.findRoomBySocket(socketId);
     if (!room || room.status !== 'failed') return;
+    if (!this.everyonePresent(room)) return; // wait for the partner to return
     this.buildLevel(room, room.level);
     room.status = 'playing';
     room.levelFailReason = null;
@@ -379,6 +382,7 @@ export class WhisperService {
   failed(socketId: string, index: number, seed: string): void {
     const room = this.findRoomBySocket(socketId);
     if (!room || room.status !== 'playing') return;
+    if (!this.everyonePresent(room)) return; // pause progression while a seat is in grace
     const player = room.players.find((p) => p.socketId === socketId);
     if (!player || player.role !== 'hacker') return; // only the hacker submits
 
@@ -403,6 +407,7 @@ export class WhisperService {
     room.status = 'failed';
     room.levelFailReason = reason;
     room.levelDeadline = null;
+    room.frozenRemainingMs = null; // never outlive 'playing'
     this.broadcastState(room);
     this.logger.log(`level ${room.level} failed (${reason}); awaiting retry ${room.id}`);
   }
@@ -509,6 +514,13 @@ export class WhisperService {
       if (room.players.some((p) => p.socketId === socketId)) return room;
     }
     return undefined;
+  }
+
+  /** Both seats filled and currently online — progression pauses otherwise. */
+  private everyonePresent(room: ServerWhisperRoom): boolean {
+    return (
+      room.players.length === MAX_PLAYERS && room.players.every((p) => p.connected)
+    );
   }
 
   private recomputeStatus(room: ServerWhisperRoom): WhisperStatus {

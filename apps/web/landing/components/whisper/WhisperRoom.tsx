@@ -75,6 +75,7 @@ export function WhisperRoom({ roomId, name }: { roomId: string; name: string }) 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const inviteUrl = `${origin}/whispering-hacker/room/${roomId}`;
   const levelMeta = WHISPER_LEVELS[wh.level - 1] ?? WHISPER_LEVELS[0];
+  const partnerAway = wh.players.some((p) => p.id !== wh.selfId && !p.connected);
 
   // ---- Hard errors ------------------------------------------------------
   if (wh.error) {
@@ -117,16 +118,15 @@ export function WhisperRoom({ roomId, name }: { roomId: string; name: string }) 
 
   // ---- Level cleared (awaiting NEXT) / failed (awaiting RETRY) -----------
   if (wh.status === 'cleared') {
-    return <EndScreen kind="complete" level={wh.level} strikes={wh.strikes} maxStrikes={wh.maxStrikes} onNext={wh.next} />;
+    return <EndScreen kind="complete" level={wh.level} strikes={wh.strikes} maxStrikes={wh.maxStrikes} onNext={wh.next} partnerAway={partnerAway} />;
   }
   if (wh.status === 'failed') {
-    return <EndScreen kind="failed" level={wh.level} reason={wh.levelFailReason} onRetry={wh.retry} />;
+    return <EndScreen kind="failed" level={wh.level} reason={wh.levelFailReason} onRetry={wh.retry} partnerAway={partnerAway} />;
   }
 
   // ---- Playing — full device shell --------------------------------------
   if (wh.status === 'playing' && wh.puzzles.length) {
     const elapsed = wh.startedAt ? Date.now() - wh.startedAt : 0;
-    const partnerAway = wh.players.some((p) => p.id !== wh.selfId && !p.connected);
     return (
       <div className="device" style={accentStyle(wh.level)}>
         <TopBar
@@ -303,7 +303,7 @@ function StrikePanel({ strikes, maxStrikes }: { strikes: number; maxStrikes: num
 /** End-of-level screen (variant A — terminal modal): LEVEL COMPLETE → NEXT LEVEL,
  *  or LEVEL FAILED → RETRY; QUIT leaves. Shown to both players. */
 function EndScreen({
-  kind, level, reason, strikes, maxStrikes, onNext, onRetry,
+  kind, level, reason, strikes, maxStrikes, onNext, onRetry, partnerAway,
 }: {
   kind: 'complete' | 'failed';
   level: number;
@@ -312,6 +312,7 @@ function EndScreen({
   maxStrikes?: number;
   onNext?: () => void;
   onRetry?: () => void;
+  partnerAway?: boolean;
 }) {
   const complete = kind === 'complete';
   const color = complete ? 'var(--green)' : 'var(--red)';
@@ -330,12 +331,17 @@ function EndScreen({
         )}
         <div className="end-btns">
           {complete ? (
-            <button className="btn primary" onClick={onNext}>NEXT LEVEL</button>
+            <button className="btn primary" onClick={onNext} disabled={partnerAway}>NEXT LEVEL</button>
           ) : (
-            <button className="btn primary" onClick={onRetry}>RETRY</button>
+            <button className="btn primary" onClick={onRetry} disabled={partnerAway}>RETRY</button>
           )}
           <Link href="/whispering-hacker" className="btn quit">QUIT</Link>
         </div>
+        {partnerAway && (
+          <div style={{ marginTop: 14, color: 'var(--red)', fontSize: 12, letterSpacing: '.08em' }}>
+            ● partner disconnected — waiting for them to reconnect…
+          </div>
+        )}
       </div>
     </Stage>
   );

@@ -1,6 +1,7 @@
-// A durable per-browser id for a Whispering Hacker player, persisted in
-// localStorage so a socket reconnect (or a page reload) can reclaim the same
-// seat in a running room instead of being treated as a brand-new player.
+// A durable per-tab id for a Whispering Hacker player, persisted in
+// sessionStorage so a socket reconnect (or a same-tab reload) reclaims the same
+// seat in a running room. Per-tab (NOT localStorage) so two tabs of one browser
+// don't share an id and hijack each other's seat.
 const KEY = 'wh.session';
 
 function fresh(): string {
@@ -13,10 +14,10 @@ function fresh(): string {
 export function clientSessionId(): string {
   if (typeof window === 'undefined') return fresh();
   try {
-    const stored = window.localStorage.getItem(KEY);
+    const stored = window.sessionStorage.getItem(KEY);
     if (stored) return stored;
     const id = fresh();
-    window.localStorage.setItem(KEY, id);
+    window.sessionStorage.setItem(KEY, id);
     return id;
   } catch {
     // Private mode / storage blocked — still hand back a (per-mount) id.

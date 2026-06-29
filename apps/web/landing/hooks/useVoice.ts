@@ -55,25 +55,20 @@ export function useVoice(
   // Latest socket, so retry()/recovery can emit without living inside the effect.
   const socketRef = useRef<WhisperSocket | null>(socket);
   socketRef.current = socket;
-  // Ask the server for a re-handshake at most once per drop.
-  const lostSentRef = useRef(false);
+  // True once we've ever gone live this session — gates auto-recovery so a
+  // rebuild that fails back to 'failed' keeps retrying (vs an initial no-partner).
+  const everConnectedRef = useRef(false);
 
   // Report the connection outcome once per mount (a retry reloads the page).
   const outcomeTrackedRef = useRef(false);
   useEffect(() => {
-    if (status === 'reconnecting') {
+    if (status === 'connected') {
+      everConnectedRef.current = true;
+      dropTrackedRef.current = false; // re-arm the next drop's telemetry
+    } else if (status === 'reconnecting' && !dropTrackedRef.current) {
       // A post-connect drop is its own signal (once per drop).
-      if (!dropTrackedRef.current) {
-        dropTrackedRef.current = true;
-        track('whisperinghacker', 'voice_dropped', { usedTurn: hasTurn() });
-      }
-      // Ask the server to re-issue WebRTC roles so both sides rebuild the peer.
-      if (!lostSentRef.current) {
-        lostSentRef.current = true;
-        socketRef.current?.emit(WhisperEvents.VoiceLost);
-      }
-    } else if (status === 'connected') {
-      lostSentRef.current = false;
+      dropTrackedRef.current = true;
+      track('whisperinghacker', 'voice_dropped', { usedTurn: hasTurn() });
     }
     if (outcomeTrackedRef.current) return;
     if (status === 'connected') {
@@ -83,6 +78,20 @@ export function useVoice(
       outcomeTrackedRef.current = true;
       track('whisperinghacker', 'voice_failed', { usedTurn: hasTurn() });
     }
+  }, [status]);
+
+  // Auto-recovery: while the link is down (and we'd been live), keep asking the
+  // server to re-issue WebRTC roles — RETRIED, not one-shot, so a request the
+  // server throttles (e.g. two drops inside its 3s window) is re-sent until it
+  // lands and a fresh handshake (handshakeGen) rebuilds the peer.
+  useEffect(() => {
+    const needsRecovery =
+      status === 'reconnecting' || (status === 'failed' && everConnectedRef.current);
+    if (!needsRecovery) return;
+    const ask = () => socketRef.current?.emit(WhisperEvents.VoiceLost);
+    ask();
+    const id = window.setInterval(ask, 4000);
+    return () => window.clearInterval(id);
   }, [status]);
 
   const clearTimer = useCallback(() => {
@@ -103,7 +112,10 @@ export function useVoice(
         } catch {
           /* malformed / stale signal - ignore */
         }
-      } else if (!peer) {
+      } else {
+        // Queue when the live peer can't accept it (null, OR destroyed but not
+        // yet rebuilt) so a re-handshake offer/candidate flushes into the new peer
+        // instead of being silently dropped.
         queueRef.current.push(p.signal);
       }
     };
@@ -277,12 +289,8 @@ export function useVoice(
     // Prefer an in-place re-handshake (keeps the socket + run alive); only fall
     // back to a full reload if the socket is somehow gone.
     const s = socketRef.current;
-    if (s) {
-      lostSentRef.current = false;
-      s.emit(WhisperEvents.VoiceLost);
-    } else if (typeof window !== 'undefined') {
-      window.location.reload();
-    }
+    if (s) s.emit(WhisperEvents.VoiceLost);
+    else if (typeof window !== 'undefined') window.location.reload();
   }, []);
 
   return { remoteStream, error, status, retry };
