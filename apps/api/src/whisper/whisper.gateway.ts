@@ -102,7 +102,12 @@ export class WhisperGateway
     }
     const id = normalizeRoomId(body.roomId);
     client.join(id);
-    const err = this.whisper.join(id, (body.name ?? '').trim(), client.id);
+    // Durable seat key: fall back to the socket id for older clients (no resume).
+    const sessionId =
+      typeof body.sessionId === 'string' && body.sessionId.trim()
+        ? body.sessionId.trim().slice(0, 64)
+        : client.id;
+    const err = this.whisper.join(id, (body.name ?? '').trim(), sessionId, client.id);
     if (err) {
       client.leave(id);
       client.emit(WhisperEvents.RoomError, err);

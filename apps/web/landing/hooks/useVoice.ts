@@ -6,7 +6,7 @@ import type { WhisperSocket } from '@/lib/whisper-socket';
 import { iceServers, hasTurn } from '@/lib/ice';
 import { track } from '@/lib/track';
 
-export type VoiceStatus = 'idle' | 'connecting' | 'connected' | 'failed';
+export type VoiceStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
 
 export interface VoiceState {
   /** The peer's audio stream - fed into the DisturbanceChain by the room. */
@@ -19,6 +19,12 @@ export interface VoiceState {
 
 /** How long to wait for the peer audio before calling it a failed connection. */
 const CONNECT_TIMEOUT_MS = 15000;
+
+/**
+ * How long ICE may sit in `disconnected` (a transient state that often self-heals)
+ * before we surface it as a `reconnecting` drop instead of keeping the UI on LIVE.
+ */
+const ICE_GRACE_MS = 6000;
 
 /**
  * Peer-to-peer *audio* over `simple-peer`, signaling relayed through the
@@ -41,10 +47,20 @@ export function useVoice(
   const timeoutRef = useRef<number | null>(null);
   const statusRef = useRef<VoiceStatus>('idle');
   statusRef.current = status;
+  // Post-connect liveness bookkeeping.
+  const iceGraceRef = useRef<number | null>(null);
+  const connectedOnceRef = useRef(false);
+  const dropTrackedRef = useRef(false);
 
   // Report the connection outcome once per mount (a retry reloads the page).
   const outcomeTrackedRef = useRef(false);
   useEffect(() => {
+    // A post-connect drop is its own signal (once) — today the only telemetry
+    // that a voice link died after going live.
+    if (status === 'reconnecting' && !dropTrackedRef.current) {
+      dropTrackedRef.current = true;
+      track('whisperinghacker', 'voice_dropped', { usedTurn: hasTurn() });
+    }
     if (outcomeTrackedRef.current) return;
     if (status === 'connected') {
       outcomeTrackedRef.current = true;
@@ -110,17 +126,50 @@ export function useVoice(
       peer.on('signal', (data: unknown) => {
         socket.emit(WhisperEvents.WebrtcSignal, { signal: data });
       });
+      const clearIceGrace = () => {
+        if (iceGraceRef.current !== null) {
+          window.clearTimeout(iceGraceRef.current);
+          iceGraceRef.current = null;
+        }
+      };
+
       peer.on('stream', (stream: MediaStream) => {
         clearTimer();
+        clearIceGrace();
+        connectedOnceRef.current = true;
         setRemoteStream(stream);
         setStatus('connected');
       });
+      // Watch the underlying ICE connection so a post-connect drop is visible
+      // instead of the UI lying "LIVE". `disconnected` is often transient, so we
+      // give it a grace window to self-heal before surfacing `reconnecting`; a
+      // real recovery (`connected`/`completed`) flips it straight back to LIVE.
+      peer.on('iceStateChange', (state: string) => {
+        if (state === 'connected' || state === 'completed') {
+          clearIceGrace();
+          if (connectedOnceRef.current) setStatus('connected');
+        } else if (state === 'disconnected') {
+          if (iceGraceRef.current === null && connectedOnceRef.current) {
+            iceGraceRef.current = window.setTimeout(() => {
+              iceGraceRef.current = null;
+              if (statusRef.current === 'connected') setStatus('reconnecting');
+            }, ICE_GRACE_MS);
+          }
+        } else if (state === 'failed' || state === 'closed') {
+          clearIceGrace();
+          if (connectedOnceRef.current) setStatus('reconnecting');
+        }
+      });
       peer.on('close', () => {
-        if (statusRef.current !== 'connected') setStatus('failed');
+        clearIceGrace();
+        // No `!== 'connected'` guard: a close AFTER going live must surface too
+        // (it previously stayed silently "connected" with dead audio).
+        setStatus(connectedOnceRef.current ? 'reconnecting' : 'failed');
       });
       peer.on('error', (e: Error) => {
         setError(e.message);
-        if (statusRef.current !== 'connected') setStatus('failed');
+        clearIceGrace();
+        setStatus(connectedOnceRef.current ? 'reconnecting' : 'failed');
       });
 
       // Flush any signals that arrived before the peer existed.
@@ -137,6 +186,12 @@ export function useVoice(
     return () => {
       destroyed = true;
       clearTimer();
+      if (iceGraceRef.current !== null) {
+        window.clearTimeout(iceGraceRef.current);
+        iceGraceRef.current = null;
+      }
+      connectedOnceRef.current = false;
+      dropTrackedRef.current = false;
       if (peerRef.current) {
         try {
           peerRef.current.destroy();

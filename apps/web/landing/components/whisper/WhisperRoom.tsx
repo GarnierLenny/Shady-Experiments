@@ -126,6 +126,7 @@ export function WhisperRoom({ roomId, name }: { roomId: string; name: string }) 
   // ---- Playing — full device shell --------------------------------------
   if (wh.status === 'playing' && wh.puzzles.length) {
     const elapsed = wh.startedAt ? Date.now() - wh.startedAt : 0;
+    const partnerAway = wh.players.some((p) => p.id !== wh.selfId && !p.connected);
     return (
       <div className="device" style={accentStyle(wh.level)}>
         <TopBar
@@ -134,10 +135,15 @@ export function WhisperRoom({ roomId, name }: { roomId: string; name: string }) 
           levelName={levelMeta?.name ?? ''}
           role={wh.selfRole}
           roomId={roomId}
-          voiceOk={voice.status === 'connected'}
+          voiceStatus={voice.status}
         />
+        {partnerAway && (
+          <div style={{ background: 'rgba(229,72,77,.12)', borderBottom: '1px solid var(--line2)', color: 'var(--red)', textAlign: 'center', padding: '9px 12px', fontSize: 12, letterSpacing: '.1em' }}>
+            ● PARTNER DISCONNECTED — run paused, waiting for them to reconnect…
+          </div>
+        )}
         <div className="body">
-          <LeftRail level={wh.level} totalLevels={wh.totalLevels} levelName={levelMeta?.name ?? ''} levelDeadline={wh.levelDeadline} strikes={wh.strikes} maxStrikes={wh.maxStrikes} />
+          <LeftRail level={wh.level} totalLevels={wh.totalLevels} levelName={levelMeta?.name ?? ''} levelDeadline={wh.levelDeadline} frozenRemainingMs={wh.frozenRemainingMs} strikes={wh.strikes} maxStrikes={wh.maxStrikes} />
           {wh.selfRole === 'operator' ? (
             <OperatorManual puzzles={wh.puzzles} level={wh.level} />
           ) : (
@@ -235,8 +241,8 @@ function Stage({ children, level }: { children: React.ReactNode; level: number }
 }
 
 function TopBar({
-  level, totalLevels, levelName, role, roomId, voiceOk,
-}: { level: number; totalLevels: number; levelName: string; role: string | null; roomId: string; voiceOk: boolean }) {
+  level, totalLevels, levelName, role, roomId, voiceStatus,
+}: { level: number; totalLevels: number; levelName: string; role: string | null; roomId: string; voiceStatus: string }) {
   return (
     <div className="top">
       <div className="brand">WHISPERING HACKER <em>EXP #002</em></div>
@@ -244,25 +250,26 @@ function TopBar({
       {role && <span className="toppill role">{role.toUpperCase()}</span>}
       <div className="spacer" />
       <div className="kv"><div className="k">Session</div><div className="v">{roomId}</div></div>
-      <div className="kv"><div className="k">Voice</div><div className={`v ${voiceOk ? 'green' : ''}`}>{voiceOk ? <><span className="dotg" />LIVE</> : 'connecting'}</div></div>
+      <div className="kv"><div className="k">Voice</div><div className={`v ${voiceStatus === 'connected' ? 'green' : ''}`}>{voiceStatus === 'connected' ? <><span className="dotg" />LIVE</> : voiceStatus === 'reconnecting' ? 'RECONNECTING…' : 'connecting'}</div></div>
       <Link href="/whispering-hacker" className="leave">LEAVE</Link>
     </div>
   );
 }
 
-function LeftRail({ level, totalLevels, levelName, levelDeadline, strikes, maxStrikes }: { level: number; totalLevels: number; levelName: string; levelDeadline: number | null; strikes: number; maxStrikes: number }) {
+function LeftRail({ level, totalLevels, levelName, levelDeadline, frozenRemainingMs, strikes, maxStrikes }: { level: number; totalLevels: number; levelName: string; levelDeadline: number | null; frozenRemainingMs: number | null; strikes: number; maxStrikes: number }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 250); return () => clearInterval(t); }, []);
-  const remain = levelDeadline ? Math.max(0, levelDeadline - now) : 0;
-  const low = remain <= 30000;
+  const paused = frozenRemainingMs != null;
+  const remain = paused ? frozenRemainingMs : levelDeadline ? Math.max(0, levelDeadline - now) : 0;
+  const low = !paused && remain <= 30000;
   return (
     <div className="col left">
       <div className="lbl muted">Level</div>
       <div className="big"><span className="amber">{level}</span> <span className="faint">/ {totalLevels}</span></div>
       <div className="sub">{levelName}</div>
       <div className="rule" />
-      <div className="lbl muted">Time left</div>
-      <div className="big" style={{ fontSize: 34, color: low ? 'var(--red)' : 'var(--amber)' }}>{fmt(remain)}</div>
+      <div className="lbl muted">{paused ? 'Time left · paused' : 'Time left'}</div>
+      <div className="big" style={{ fontSize: 34, color: paused ? 'var(--mut)' : low ? 'var(--red)' : 'var(--amber)' }}>{fmt(remain)}</div>
       <div className="rule" />
       <StrikePanel strikes={strikes} maxStrikes={maxStrikes} />
       <div className="micsection">
@@ -365,6 +372,8 @@ function RightRail({ voice, level, levelName }: { voice: { status: string; retry
       <div className="rbox">
         {voice.status === 'connected' ? (
           <span className="voiceline">● partner connected</span>
+        ) : voice.status === 'reconnecting' ? (
+          <span className="voiceline bad" onClick={voice.retry}>● voice dropped — reconnect</span>
         ) : voice.status === 'failed' ? (
           <span className="voiceline bad" onClick={voice.retry}>voice failed — reconnect</span>
         ) : (
