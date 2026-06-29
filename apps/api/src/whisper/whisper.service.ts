@@ -35,6 +35,11 @@ const DISCONNECT_GRACE_MS = 25000;
 @Injectable()
 export class WhisperService {
   private readonly logger = new Logger(WhisperService.name);
+  // NOTE: rooms live in process memory only. A redeploy or a second instance
+  // drops every active pair (handleDisconnect -> grace -> evict), and two peers on
+  // different instances never share a room or relayed signals. For multi-instance
+  // or zero-downtime deploys, add the socket.io Redis adapter + sticky sessions and
+  // move room state to Redis. Single-instance is fine for now — gate deploys.
   private readonly rooms = new Map<string, ServerWhisperRoom>();
   /** The `/whisper` namespace, bound from the gateway's afterInit. */
   private server!: Namespace;

@@ -235,6 +235,44 @@ export function useVoice(
     // cleanup tears down the old peer and this effect rebuilds a fresh one.
   }, [socket, localStream, initiator, handshakeGen, clearTimer]);
 
+  // Media-flow watchdog: ICE can stay 'connected' while inbound packets stop
+  // (a stall that fires no ICE event). Poll getStats; if inbound audio bytes
+  // flatline for ~10s, treat it as a drop so recovery (re-handshake) kicks in.
+  useEffect(() => {
+    if (status !== 'connected') return;
+    let lastBytes = -1;
+    let stalls = 0;
+    const id = window.setInterval(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pc: any = peerRef.current?._pc;
+      if (!pc?.getStats) return;
+      pc.getStats()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then((stats: any) => {
+          let bytes = -1;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          stats.forEach((r: any) => {
+            if (r.type === 'inbound-rtp' && r.kind === 'audio') {
+              bytes = typeof r.bytesReceived === 'number' ? r.bytesReceived : bytes;
+            }
+          });
+          if (bytes < 0) return;
+          if (lastBytes >= 0 && bytes === lastBytes) {
+            stalls += 1;
+            if (stalls >= 2 && statusRef.current === 'connected') {
+              track('whisperinghacker', 'voice_stall');
+              setStatus('reconnecting');
+            }
+          } else {
+            stalls = 0;
+          }
+          lastBytes = bytes;
+        })
+        .catch(() => {});
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, [status]);
+
   const retry = useCallback(() => {
     // Prefer an in-place re-handshake (keeps the socket + run alive); only fall
     // back to a full reload if the socket is somehow gone.
