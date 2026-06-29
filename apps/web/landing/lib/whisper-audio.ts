@@ -313,30 +313,92 @@ export class DisturbanceChain {
   private seqTimer = 0;
   private seqQueue: string[] = [];
   private onSeqChange: ((id: string | null) => void) | null = null;
+  /** Listener that nudges a suspended/interrupted context back to running. */
+  private resumeHandler: (() => void) | null = null;
 
-  /** Build the graph around a freshly received remote stream. */
-  connect(stream: MediaStream): void {
-    this.dispose();
+  /** Lazily create and KEEP one AudioContext, with auto-resume wiring. */
+  private ensureContext(): AudioContext | null {
+    if (this.ctx) return this.ctx;
     const Ctor = getAudioContextCtor();
-    if (!Ctor) return; // SSR / unsupported
-
-    const ctx = new Ctor();
+    if (!Ctor) return null; // SSR / unsupported
+    let ctx: AudioContext;
+    try {
+      ctx = new Ctor();
+    } catch {
+      return null; // per-tab context cap / construction failure — degrade, don't crash
+    }
     this.ctx = ctx;
-
-    // Keep-alive element (muted) so Chrome pulls samples through the graph.
-    const el = new Audio();
-    el.srcObject = stream;
-    el.muted = true;
-    el.play().catch(() => {});
-    this.keepAlive = el;
-
-    this.source = ctx.createMediaStreamSource(stream);
     this.master = ctx.createGain();
     this.master.gain.value = 1;
     this.master.connect(ctx.destination);
 
+    // Browsers start an AudioContext 'suspended' (autoplay policy) and re-suspend
+    // it on tab backgrounding or — on iOS — 'interrupted' for calls/Siri/route
+    // changes, then never auto-resume. Nudge it back on any context state change
+    // and on the first user gesture / tab refocus.
+    const resume = () => {
+      if (this.ctx && this.ctx.state !== 'running') {
+        void this.ctx.resume().catch(() => {});
+        this.keepAlive?.play().catch(() => {});
+      }
+    };
+    this.resumeHandler = resume;
+    ctx.addEventListener('statechange', resume);
+    if (typeof document !== 'undefined') {
+      document.addEventListener('pointerdown', resume, true);
+      document.addEventListener('keydown', resume, true);
+      document.addEventListener('visibilitychange', resume);
+    }
+    return ctx;
+  }
+
+  /** Build/rebuild the graph around a (possibly new) remote stream. */
+  connect(stream: MediaStream): void {
+    const ctx = this.ensureContext();
+    if (!ctx || !this.master) return;
+
+    // Swap the source without tearing down the shared context.
+    this.clearEffect();
+    this.detachSource();
+
+    // A trackless / already-ended stream would throw in createMediaStreamSource.
+    if (!stream.getAudioTracks().some((t) => t.readyState === 'live')) return;
+
+    // Keep-alive element so Chrome keeps pulling samples through the source node.
+    // It MUST be in the DOM and playing — a detached one gets paused/throttled.
+    const el = new Audio();
+    el.srcObject = stream;
+    el.muted = true;
+    el.setAttribute('playsinline', '');
+    el.style.display = 'none';
+    if (typeof document !== 'undefined') document.body.appendChild(el);
+    el.play().catch(() => {});
+    el.addEventListener('pause', () => {
+      el.play().catch(() => {});
+    });
+    this.keepAlive = el;
+
+    try {
+      this.source = ctx.createMediaStreamSource(stream);
+    } catch {
+      this.detachSource();
+      return; // stream went bad between the check and here — degrade gracefully
+    }
+
     void ctx.resume().catch(() => {});
     this.applyIntensity(WHISPER_LEVELS[this.level - 1]?.audioIntensity ?? 0);
+  }
+
+  /** Disconnect the current source + keep-alive element, keeping the context. */
+  private detachSource(): void {
+    try { this.source?.disconnect(); } catch { /* ignore */ }
+    this.source = null;
+    if (this.keepAlive) {
+      try { this.keepAlive.pause(); } catch { /* ignore */ }
+      this.keepAlive.srcObject = null;
+      this.keepAlive.remove();
+      this.keepAlive = null;
+    }
   }
 
   /** Set the active level (1-3); re-tunes the graph to that intensity. */
@@ -560,16 +622,22 @@ export class DisturbanceChain {
   dispose(): void {
     this.stopSequence();
     this.clearEffect();
+    this.detachSource();
     try { this.master?.disconnect(); } catch { /* ignore */ }
-    if (this.keepAlive) {
-      this.keepAlive.srcObject = null;
-      this.keepAlive = null;
-    }
+    this.master = null;
     if (this.ctx) {
-      void this.ctx.close().catch(() => {});
+      const ctx = this.ctx;
+      if (this.resumeHandler) {
+        ctx.removeEventListener('statechange', this.resumeHandler);
+        if (typeof document !== 'undefined') {
+          document.removeEventListener('pointerdown', this.resumeHandler, true);
+          document.removeEventListener('keydown', this.resumeHandler, true);
+          document.removeEventListener('visibilitychange', this.resumeHandler);
+        }
+        this.resumeHandler = null;
+      }
+      void ctx.close().catch(() => {});
       this.ctx = null;
     }
-    this.source = null;
-    this.master = null;
   }
 }
