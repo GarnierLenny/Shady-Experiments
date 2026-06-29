@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SIGNALS } from '@shadyexperiments/shared';
-import { DisturbanceChain, WHISPER_PHASES } from '../../../../lib/whisper-audio';
+import { DisturbanceChain, WHISPER_PHASES, SEQUENCE_GAP_S, PHASE_DURATIONS_S } from '../../../../lib/whisper-audio';
 import { playTones } from '../../../../lib/whisper-signal';
 
 /** A looping, voice-ish source so degradation is audible without a peer or mic. */
@@ -63,6 +63,8 @@ export default function AudioLab() {
   const [running, setRunning] = useState(false);
   const [useMic, setUseMic] = useState(false);
   const [phase, setPhase] = useState('whisper');
+  const [auto, setAuto] = useState(false);
+  const [seqId, setSeqId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const stop = useCallback(() => {
@@ -72,14 +74,30 @@ export default function AudioLab() {
     srcRef.current = null;
     micRef.current?.getTracks().forEach((t) => t.stop());
     micRef.current = null;
+    setAuto(false);
+    setSeqId(null);
     setRunning(false);
   }, []);
 
   useEffect(() => stop, [stop]); // clean up on unmount
 
+  // Manual phase only drives the chain when the rotation is off.
   useEffect(() => {
-    if (running) chainRef.current?.setPhase(phase);
-  }, [phase, running]);
+    if (running && !auto) chainRef.current?.setPhase(phase);
+  }, [phase, running, auto]);
+
+  const toggleAuto = useCallback(() => {
+    const chain = chainRef.current;
+    if (!chain) return;
+    if (auto) {
+      chain.stopSequence();
+      setAuto(false);
+      setSeqId(null);
+    } else {
+      setAuto(true);
+      chain.startSequence((id) => setSeqId(id));
+    }
+  }, [auto]);
 
   async function start() {
     setErr(null);
@@ -123,6 +141,14 @@ export default function AudioLab() {
             <button className="btn" onClick={running ? stop : start} style={{ padding: '12px 22px' }}>
               {running ? '■ STOP' : '▶ START'}
             </button>
+            <button
+              className="btn"
+              onClick={toggleAuto}
+              disabled={!running}
+              style={{ padding: '12px 22px', borderColor: auto ? 'var(--amber)' : undefined, color: auto ? 'var(--amber-b)' : undefined }}
+            >
+              {auto ? '■ STOP ROTATION' : '▶ AUTO ROTATE'}
+            </button>
             <label className="miclbl" style={{ cursor: 'pointer', gap: 8 }}>
               <input type="checkbox" checked={useMic} disabled={running} onChange={(e) => setUseMic(e.target.checked)} />
               use microphone <span className="faint">(headphones — feedback otherwise)</span>
@@ -131,7 +157,15 @@ export default function AudioLab() {
           </div>
           {err && <p className="fb bad" style={{ textAlign: 'left', height: 'auto', marginTop: 10 }}>⚠ {err}</p>}
           <p className="sub" style={{ marginTop: 12 }}>
-            Now playing: <span className="accent">{current?.name ?? phase}</span> — {current?.blurb}
+            {auto ? (
+              seqId ? (
+                <>Rotation: <span className="accent">{WHISPER_PHASES.find((p) => p.id === seqId)?.name ?? seqId}</span> — {PHASE_DURATIONS_S[seqId]?.[0]}–{PHASE_DURATIONS_S[seqId]?.[1]}s</>
+              ) : (
+                <>Rotation: <span className="accent">— clean gap —</span> ({SEQUENCE_GAP_S}s between effects)</>
+              )
+            ) : (
+              <>Now playing: <span className="accent">{current?.name ?? phase}</span> — {current?.blurb}</>
+            )}
           </p>
         </div>
 
@@ -140,17 +174,27 @@ export default function AudioLab() {
           <div className="panel" style={{ marginTop: 14 }} key={lvl}>
             <div className="lbl">Level {lvl} phases</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 10, marginTop: 12 }}>
-              {WHISPER_PHASES.filter((p) => p.level === lvl).map((p) => (
-                <button
-                  key={p.id}
-                  className={`btn${phase === p.id ? ' phase-on' : ''}`}
-                  style={{ padding: '12px 14px', textAlign: 'left', borderColor: phase === p.id ? 'var(--amber)' : undefined, color: phase === p.id ? 'var(--amber-b)' : undefined }}
-                  onClick={() => setPhase(p.id)}
-                >
-                  {phase === p.id ? '▶ ' : ''}{p.name}
-                  <div className="faint" style={{ fontSize: 11, marginTop: 4, letterSpacing: 0 }}>{p.blurb}</div>
-                </button>
-              ))}
+              {WHISPER_PHASES.filter((p) => p.level === lvl).map((p) => {
+                const active = !auto && phase === p.id;
+                const live = auto && seqId === p.id;
+                const band = PHASE_DURATIONS_S[p.id];
+                const lit = active || live;
+                return (
+                  <button
+                    key={p.id}
+                    className={`btn${lit ? ' phase-on' : ''}`}
+                    style={{ padding: '12px 14px', textAlign: 'left', borderColor: lit ? 'var(--amber)' : undefined, color: lit ? 'var(--amber-b)' : undefined }}
+                    onClick={() => {
+                      if (auto) { chainRef.current?.stopSequence(); setAuto(false); setSeqId(null); }
+                      setPhase(p.id);
+                    }}
+                  >
+                    {lit ? '▶ ' : ''}{p.name}
+                    {band ? <span className="faint" style={{ marginLeft: 6 }}>· {band[0]}–{band[1]}s</span> : null}
+                    <div className="faint" style={{ fontSize: 11, marginTop: 4, letterSpacing: 0 }}>{p.blurb}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}

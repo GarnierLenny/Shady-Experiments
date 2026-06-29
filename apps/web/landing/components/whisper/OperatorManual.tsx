@@ -59,7 +59,7 @@ export function OperatorManual({ puzzles }: { puzzles: PuzzleSlot[]; level: numb
 
         <div className="fomtabs">
           {puzzles.map((q, i) => (
-            <button key={q.index} className={`fomtab${i === active ? ' on' : ''}`} onClick={() => setActive(i)}>
+            <button key={q.index} className={`fomtab${i === active ? ' on' : ''}`} onClick={() => { setActive(i); setSel(null); }}>
               SYS 0{i + 1} · {q.name}{q.solved ? ' ✓' : ''}
             </button>
           ))}
@@ -115,7 +115,7 @@ function ListDetail({
         </div>
         <div className="fomcol">
           <div className="fomstep">2 · {step2}</div>
-          <div className="wftbl">{sel == null ? <div className="wfempty">{empty}</div> : renderDetail(sel)}</div>
+          <div className="wftbl">{sel == null || sel >= items.length ? <div className="wfempty">{empty}</div> : renderDetail(sel)}</div>
         </div>
       </div>
     </>
@@ -251,7 +251,7 @@ function IdCheck({ index, title, slot, sel, setSel }: SecProps) {
         <div className="fomcol">
           <div className="fomstep">2 · Identity record</div>
           <div className="wftbl">
-            {sel == null ? <div className="wfempty">Pick the name P1 reads →</div> : (() => {
+            {sel == null || sel >= PEOPLE.length ? <div className="wfempty">Pick the name P1 reads →</div> : (() => {
               const q = PEOPLE[sel];
               const F = (l: string, v: string | number) => <div className="idf"><span>{l}</span><b>{v}</b></div>;
               return (

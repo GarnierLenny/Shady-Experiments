@@ -59,7 +59,7 @@ export interface WhisperLevel {
 
 export const WHISPER_LEVELS: WhisperLevel[] = [
   { level: 1, name: 'WHISPER', tagline: 'Keep your voice down.', audioIntensity: 0 },
-  { level: 2, name: 'DISTURBANCE', tagline: 'The line is getting noisy.', audioIntensity: 0.5 },
+  { level: 2, name: 'DISTURBANCE', tagline: 'The line is getting noisy.', audioIntensity: 0.65 },
   { level: 3, name: 'CHAOS', tagline: 'Say again? Say again?', audioIntensity: 1 },
 ];
 
