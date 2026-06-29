@@ -11,12 +11,13 @@ const common_1 = require("@nestjs/common");
 const app_controller_1 = require("./app.controller");
 const lobby_module_1 = require("./lobby/lobby.module");
 const results_module_1 = require("./results/results.module");
+const whisper_module_1 = require("./whisper/whisper.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [lobby_module_1.LobbyModule, results_module_1.ResultsModule],
+        imports: [lobby_module_1.LobbyModule, results_module_1.ResultsModule, whisper_module_1.WhisperModule],
         controllers: [app_controller_1.AppController],
     })
 ], AppModule);

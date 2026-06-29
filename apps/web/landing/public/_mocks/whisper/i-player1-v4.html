@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>P1 — interactive v4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#08090a; --panel:#0e1112; --line:#1d2123; --line2:#2a2f31;
+    --ink:#ededed; --mut:#9a9d9e; --faint:#5a5e60; --dim:#3a3e40;
+    --amber:#e9ba4c; --amber-b:#f8d066; --green:#4ec46a; --red:#ef5b54;
+    --mono:"JetBrains Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#000;color:var(--ink);font-family:var(--mono);-webkit-font-smoothing:antialiased}
+  .page{max-width:1280px;margin:0 auto;padding:26px 22px 70px}
+  .hint-banner{border:1px solid var(--line2);border-radius:4px;padding:12px 16px;margin-bottom:18px;color:var(--mut);font-size:12.5px;line-height:1.6}
+  .hint-banner b{color:var(--amber)}
+
+  .device{background:radial-gradient(120% 90% at 80% -10%, rgba(233,186,76,.05), transparent 55%), var(--bg);
+    border:1px solid var(--line);border-radius:6px;display:grid;grid-template-rows:auto 1fr auto;min-height:720px;overflow:hidden;position:relative}
+
+  .top{display:flex;align-items:center;gap:30px;padding:16px 22px;border-bottom:1px solid var(--line)}
+  .brand{font-weight:700;font-size:15px;letter-spacing:.06em}
+  .brand em{color:var(--amber);font-style:normal;font-weight:500;margin-left:8px;font-size:13px}
+  .top .spacer{flex:1}
+  .kv .k{font-size:10px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+  .kv .v{font-size:13px;margin-top:3px}
+  .kv .v.green{color:var(--green)} .dotg{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;box-shadow:0 0 8px var(--green)}
+  .abort{border:1px solid var(--red);color:var(--red);border-radius:4px;padding:9px 16px;font-size:13px;letter-spacing:.08em;display:flex;align-items:center;gap:10px;cursor:pointer}
+  .abort .sq{width:11px;height:11px;border:1px solid var(--red)}
+
+  .body{display:grid;grid-template-columns:230px 1fr 250px}
+  .col{padding:24px 22px}
+  .col.left{border-right:1px solid var(--line)}
+  .col.right{border-left:1px solid var(--line)}
+  .lbl{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber)}
+  .lbl.muted{color:var(--faint)}
+  .obj p{color:var(--mut);font-size:13px;line-height:1.7;margin:10px 0 0}
+  .rule{height:1px;background:var(--line);margin:18px 0}
+  .big{font-size:30px;letter-spacing:.04em;margin-top:8px}
+  .big.amber{color:var(--amber)}
+  .sub{font-size:11px;color:var(--faint);margin-top:4px;letter-spacing:.06em}
+  .link{display:flex;align-items:center;gap:8px;margin-top:12px}
+  .node{width:42px;height:42px;border-radius:50%;border:1px solid var(--amber);color:var(--amber);display:grid;place-items:center;font-size:12px;box-shadow:0 0 14px rgba(233,186,76,.2)}
+  .dots{flex:1;border-top:1px dashed var(--line2);height:1px}
+  .linkcap{font-size:11px;color:var(--faint);margin-top:10px}
+
+  .center{padding:22px;position:relative}
+  .hud{position:relative;border:1px solid var(--line2);border-radius:2px;padding:24px 28px;min-height:580px}
+  .corner{position:absolute;width:16px;height:16px;border:2px solid var(--amber);opacity:.8}
+  .corner.tl{top:-1px;left:-1px;border-right:none;border-bottom:none}
+  .corner.tr{top:-1px;right:-1px;border-left:none;border-bottom:none}
+  .corner.bl{bottom:-1px;left:-1px;border-right:none;border-top:none}
+  .corner.br{bottom:-1px;right:-1px;border-left:none;border-top:none}
+
+  .tabs{display:flex;gap:8px;margin-bottom:8px}
+  .tab{flex:1;border:1px solid var(--line2);border-radius:3px;padding:10px 12px 0;cursor:pointer;background:rgba(255,255,255,.01);transition:border-color .12s}
+  .tab .n{font-size:10px;letter-spacing:.1em;color:var(--faint);display:flex;justify-content:space-between;align-items:center}
+  .tab .n .cd{color:var(--mut);display:flex;align-items:center;gap:4px}
+  .tab .n .cd .re{opacity:.6} .tab .n .cd.warn{color:var(--red)} .tab .n .cd.reseed{color:var(--red);letter-spacing:.04em}
+  .tab .t{font-size:13px;margin-top:6px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .tab .bar{height:3px;background:rgba(255,255,255,.06);margin:9px -12px 0;position:relative}
+  .tab .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--amber);transition:width 1s linear}
+  .tab .bar i.warn{background:var(--red)}
+  .tab.active{border-color:var(--amber);background:rgba(233,186,76,.08)}
+  .tab.active .n{color:var(--amber)} .tab.active .t{color:var(--amber-b)}
+  .tab.done{border-color:rgba(78,196,106,.5)} .tab.done .chk{color:var(--green)} .tab.done .cd{color:var(--green)} .tab.done .bar i{background:var(--green);width:100%!important}
+  .tab.reseeding{border-color:var(--red);animation:encshake .16s infinite}
+  .tabhint{font-size:10.5px;color:var(--faint);letter-spacing:.06em;margin:0 0 20px}
+  .tabhint b{color:var(--amber)}
+
+  .pcard{position:relative;border:1px solid var(--line);border-radius:3px;padding:22px 22px 18px;min-height:400px}
+  .pcard.reseeding{border-color:var(--red);animation:encshake .16s infinite}
+  @keyframes encshake{0%,100%{transform:translate(0,0)}20%{transform:translate(-3px,1px)}40%{transform:translate(3px,-1px)}60%{transform:translate(-2px,1px)}80%{transform:translate(2px,2px)}}
+  .pcard-ov{position:absolute;inset:0;background:rgba(6,7,8,.94);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:5;border:1px solid var(--red);border-radius:3px}
+  .pcard-ov.show{display:flex} .pcard-ov.regen{border-color:var(--amber)}
+  .pcard-ov .glyph{width:50px;height:50px;border:2px solid var(--red);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite}
+  .pcard-ov.regen .glyph{border-color:var(--amber);border-top-color:transparent}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .pcard-ov .sys{font-size:11px;letter-spacing:.18em;color:var(--faint)}
+  .pcard-ov .msg{font-size:21px;letter-spacing:.16em;font-weight:700}
+  .pcard-ov.lost .msg{color:var(--red);text-shadow:2px 0 #36c5f0,-2px 0 var(--red);animation:rgb .12s infinite}
+  .pcard-ov.regen .msg{color:var(--amber-b)}
+  @keyframes rgb{50%{text-shadow:-2px 0 #36c5f0,2px 0 var(--red)}}
+  .pcard-ov .sm{font-size:12px;color:var(--faint);letter-spacing:.08em;min-height:15px}
+
+  .htitle{font-size:24px;letter-spacing:.05em;margin:0}
+  .uline{height:2px;width:100px;background:var(--amber);margin:11px 0 6px}
+  .reseedcap{font-size:11px;color:var(--faint);letter-spacing:.04em;margin-bottom:18px}
+  .reseedcap b{color:var(--amber)}
+  .prompt{color:var(--mut);font-size:14px;line-height:1.6;margin-bottom:18px}
+  .prompt b{color:var(--ink)} .param{color:var(--amber-b)}
+  .entlbl{font-size:11px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase;margin-bottom:12px}
+
+  .coderow{display:flex;align-items:center;gap:14px;justify-content:center;margin:4px 0 18px}
+  .cbox{width:96px;height:96px;border:1px solid var(--line2);border-radius:3px;display:grid;place-items:center;font-size:42px;color:var(--ink);cursor:pointer;position:relative}
+  .cbox .seglbl{position:absolute;top:7px;left:0;right:0;text-align:center;font-size:9px;letter-spacing:.14em;color:var(--faint)}
+  .cbox.empty{color:var(--dim)} .cbox.empty:after{content:"_";font-size:36px}
+  .cbox.focus{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber),0 0 16px rgba(233,186,76,.18)}
+  .cbox .swfill{width:50px;height:50px;border-radius:3px}
+  .sep{color:var(--dim);font-size:22px}
+  .picker{border:1px solid var(--line);border-radius:3px;padding:12px;margin-bottom:8px}
+  .picker .ph{font-size:11px;color:var(--faint);letter-spacing:.1em;margin-bottom:9px}
+  .opts{display:flex;gap:9px;flex-wrap:wrap}
+  .opt{width:46px;height:46px;border:1px solid var(--line2);border-radius:3px;display:grid;place-items:center;font-size:22px;cursor:pointer;color:var(--ink)}
+  .opt:hover{border-color:var(--amber);color:var(--amber-b)}
+  .opt .swatch{width:28px;height:28px;border-radius:3px}
+
+  /* coordinate lookup */
+  .target{display:flex;gap:34px;justify-content:center;align-items:center;margin:0 0 18px;padding:16px;border:1px solid var(--line2);border-radius:3px;background:rgba(255,255,255,.012)}
+  .tgt{display:flex;flex-direction:column;align-items:center;gap:9px}
+  .tgtsw{width:46px;height:46px;border-radius:50%;box-shadow:0 0 16px rgba(255,255,255,.08)}
+  .tgtshape{font-size:42px;line-height:1}
+  .tgtlbl{font-size:11px;letter-spacing:.14em;color:var(--mut)}
+  .gridwrap{display:flex;justify-content:center}
+  .grid5{display:grid;grid-template-columns:auto repeat(5,1fr);gap:6px;max-width:430px;width:100%}
+  .ghead,.rowlbl{display:grid;place-items:center;font-size:12px;color:var(--faint)}
+  .cell{aspect-ratio:1;border:1px solid var(--line2);border-radius:2px;display:grid;place-items:center;font-size:10px;color:var(--faint);cursor:pointer;background:rgba(255,255,255,.01);transition:.1s}
+  .cell:hover{border-color:var(--amber);color:var(--amber-b);background:rgba(233,186,76,.07)}
+  .cell.bad{border-color:var(--red);color:var(--red);animation:cellbad .3s}
+  @keyframes cellbad{0%,100%{transform:translateX(0)}33%{transform:translateX(-3px)}66%{transform:translateX(3px)}}
+
+  .relays{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .relay{border:1px solid var(--line2);background:rgba(255,255,255,.01);color:var(--ink);font-family:var(--mono);font-size:13px;letter-spacing:.06em;padding:17px 6px;border-radius:3px;cursor:pointer}
+  .relay:hover{border-color:var(--amber);color:var(--amber-b)} .relay:disabled{opacity:.3;cursor:not-allowed}
+  .seqshow{min-height:38px;border:1px solid var(--line);border-radius:3px;margin-bottom:13px;padding:10px 13px;color:var(--amber-b);font-size:13px}
+  .seqshow .ph{color:var(--faint)}
+
+  .btn{border:1px solid var(--line2);background:rgba(255,255,255,.015);color:var(--ink);font-family:var(--mono);font-size:13px;letter-spacing:.1em;padding:0 22px;border-radius:3px;cursor:pointer}
+  .btn:hover{border-color:var(--amber);color:var(--amber-b)} .btn:disabled{opacity:.35;cursor:not-allowed}
+  .submit{display:block;width:100%;text-align:center;padding:16px;font-size:14px;letter-spacing:.14em;margin-top:6px}
+
+  .fb{height:20px;margin-top:14px;text-align:center;font-size:13px;letter-spacing:.1em}
+  .fb.bad{color:var(--red)} .fb.ok{color:var(--green)}
+  .demo{margin-top:16px;border-top:1px dashed var(--line);padding-top:11px;font-size:11px;color:var(--dim);letter-spacing:.04em}
+  .demo b{color:var(--faint)}
+
+  .rbox{border:1px solid var(--line);border-radius:3px;padding:14px;margin-top:12px;font-size:12.5px;color:var(--mut);line-height:1.6}
+  .rbox.note{font-style:italic;color:var(--faint)}
+  .voiceline{color:var(--amber)}
+  .log{margin-top:12px;font-size:12px;line-height:1.8;max-height:200px;overflow:hidden}
+  .log .row{display:flex;gap:10px}
+  .log .ts{color:var(--faint)} .log .ev{color:var(--mut)}
+  .log .row.amber .ev{color:var(--amber)} .log .row.red .ev{color:var(--red)} .log .row.green .ev{color:var(--green)}
+
+  .bot{display:flex;align-items:center;gap:18px;padding:14px 22px;border-top:1px solid var(--line);font-size:11px;color:var(--faint);letter-spacing:.08em}
+  .wlogo{width:26px;height:26px;border:1px solid var(--line2);display:grid;place-items:center;color:var(--mut)}
+  .bot .spacer{flex:1}
+
+  .clear{position:absolute;inset:0;background:rgba(4,5,6,.95);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:30}
+  .clear.show{display:flex}
+  .clear h2{font-size:42px;color:var(--green);letter-spacing:.08em;margin:0}
+  .clear .t{font-size:32px} .clear .l{font-size:11px;letter-spacing:.16em;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hint-banner">
+    <b>P1 mock v4.</b> New task <b>NODE LOCK = Coordinate Lookup</b>: a 5×5 grid + a target (color + shape); the operator reads the protocol database (color → shape → cell) and you click it. Per-task timers (AUTH 45s · NODE 28s · RELAY 35s); on timeout only that encart reseeds. Solve solo with the dim <b>demo</b> line, or hit <b>FORCE TIMEOUT</b>.
+  </div>
+
+  <div class="device" id="device">
+    <div class="clear" id="clear"><div class="l">LEVEL 1 — WHISPER</div><h2>LEVEL CLEAR</h2><div class="l">total time</div><div class="t" id="cleartime">00:00</div><button class="btn" style="margin-top:12px;padding:12px 22px" onclick="resetLevel()">Run it again</button></div>
+
+    <div class="top">
+      <div class="brand">WHISPERING HACKER <em>EXP #002</em></div>
+      <div class="spacer"></div>
+      <div class="kv"><div class="k">Session</div><div class="v">WH-002-A7F3</div></div>
+      <div class="kv"><div class="k">Connection</div><div class="v green"><span class="dotg"></span>SECURE</div></div>
+      <div class="abort">ABORT <span class="sq"></span></div>
+    </div>
+
+    <div class="body">
+      <div class="col left">
+        <div class="obj"><div class="lbl">Objective</div><p>Three subsystems are sealed. Crack all three. You hold nothing — every answer lives in your operator's manual. Talk fast: each subsystem rots on its own clock.</p></div>
+        <div class="rule"></div>
+        <div class="lbl muted">Level</div><div class="big">1 <span style="color:var(--faint)">/ 3</span></div><div class="sub">WHISPER · clean line</div>
+        <div class="rule"></div>
+        <div class="lbl muted">Level time</div><div class="big amber" id="chrono">00:00</div><div class="sub">whole level · no limit</div>
+        <div class="rule"></div>
+        <div class="lbl muted">Operatives</div>
+        <div class="link"><div class="node">P1</div><div class="dots"></div><div class="node">P2</div></div>
+        <div class="linkcap">voice up · both online</div>
+        <div class="rule"></div>
+        <button class="btn" style="padding:10px 12px;font-size:11px;width:100%" onclick="forceTimeout()">⚡ FORCE TIMEOUT (demo)</button>
+      </div>
+
+      <div class="center">
+        <div class="hud">
+          <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+          <div class="tabs" id="tabs"></div>
+          <div class="tabhint">↻ each tab has its <b>own</b> timer. At 0:00, <b>only that subsystem</b> reseeds a new code — the others keep theirs.</div>
+          <div id="puzzle"></div>
+          <div class="fb" id="fb"></div>
+        </div>
+      </div>
+
+      <div class="col right">
+        <div class="lbl muted">Voice link</div>
+        <div class="rbox"><span class="voiceline">● P2 connected</span><br>The line degrades each level. Repeat yourself. Loudly.</div>
+        <div class="lbl muted" style="margin-top:18px">Field note</div>
+        <div class="rbox note">⚠ A subsystem reseeds on its own timeout. The old code dies with it. The others are unaffected.</div>
+        <div class="lbl muted" style="margin-top:18px">Log</div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+
+    <div class="bot"><div class="wlogo">W</div><div><span style="color:var(--faint)">PROTOCOL</span> &nbsp; WHSP v1.0</div><div class="spacer"></div><div><span style="color:var(--faint)">CLEARANCE</span> &nbsp; OPERATOR-PAIR</div></div>
+  </div>
+</div>
+
+<script>
+const SHAPES=[{id:'tri',g:'▲',n:'TRIANGLE'},{id:'cir',g:'●',n:'CIRCLE'},{id:'sqr',g:'■',n:'SQUARE'},{id:'dia',g:'◆',n:'DIAMOND'}];
+const COLORS=[{id:'green',hex:'#30a46c'},{id:'amber',hex:'#f5a524'},{id:'crimson',hex:'#e5484d'},{id:'azure',hex:'#3b82f6'}];
+const SYMS=[{id:'omega',g:'Ω'},{id:'delta',g:'Δ'},{id:'sigma',g:'Σ'},{id:'phi',g:'Φ'}];
+const COLS=['A','B','C','D','E'], ROWS=[1,2,3,4,5];
+const RELAYS=[{id:'gantry',l:'GANTRY'},{id:'boiler',l:'BOILER'},{id:'dynamo',l:'DYNAMO'},{id:'latch',l:'LATCH'}];
+const DUR={code:45, coord:28, relays:35};
+const rand=a=>a[Math.floor(Math.random()*a.length)];
+const shapeName=id=>SHAPES.find(s=>s.id===id).n;
+
+function genCode(){return{answer:{shape:rand(SHAPES).id,color:rand(COLORS).id,symbol:rand(SYMS).id}};}
+function genCoord(){
+  const color=rand(COLORS).id, shape=rand(SHAPES).id;
+  const all=[];COLS.forEach(c=>ROWS.forEach(r=>all.push(c+r)));
+  const picked=[...all].sort(()=>Math.random()-.5).slice(0,4);
+  const map={};SHAPES.forEach((s,idx)=>map[s.id]=picked[idx]);
+  return{target:{color,shape},map,answer:{cell:map[shape]}};
+}
+function genRelays(){return{answer:{order:[...RELAYS].sort(()=>Math.random()-.5).map(r=>r.id).join('-')}};}
+function newPuzzle(type,name){const g=type==='code'?genCode():type==='coord'?genCoord():genRelays();return{type,name,solved:false,reseeding:false,max:DUR[type],t:DUR[type],...g};}
+
+function resetLevel(){
+  puzzles=[newPuzzle('code','AUTH'),newPuzzle('coord','NODE LOCK'),newPuzzle('relays','RELAYS')];
+  active=0;levelStart=Date.now();
+  document.getElementById('clear').classList.remove('show');
+  logEv('session started','amber');resetInputs();renderTabs();renderPuzzle();
+}
+let puzzles,active,levelStart,codeSel,codeFocus,seq;
+function resetInputs(){codeSel={shape:null,color:null,symbol:null};codeFocus='shape';seq=[];}
+function fmt(s){s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+function logEv(t,c=''){const log=document.getElementById('log');const ts=new Date().toLocaleTimeString('en-GB').slice(0,8);const r=document.createElement('div');r.className='row '+c;r.innerHTML=`<span class="ts">${ts}</span><span class="ev">${t}</span>`;log.prepend(r);while(log.children.length>7)log.removeChild(log.lastChild);}
+function setFb(t,c=''){const fb=document.getElementById('fb');fb.className='fb '+c;fb.textContent=t;}
+
+function renderTabs(){
+  document.getElementById('tabs').innerHTML=puzzles.map((p,i)=>{
+    const cls=['tab',i===active?'active':'',p.solved?'done':'',p.reseeding?'reseeding':''].join(' ');
+    const warn=(!p.solved&&!p.reseeding&&p.t<=8)?' warn':'';
+    let cd;
+    if(p.solved)cd='<span class="cd">✓</span>';
+    else if(p.reseeding)cd='<span class="cd reseed">RESEEDING</span>';
+    else cd=`<span class="cd${warn}"><span class="re">↻</span><span data-cd="${i}">${fmt(p.t)}</span></span>`;
+    const mark=p.solved?'<span class="chk">✓</span>':(i===active?'<span class="chk">●</span>':'<span class="chk" style="color:var(--faint)">○</span>');
+    const pct=Math.max(0,p.t/p.max*100);
+    return `<div class="${cls}" data-i="${i}" onclick="switchTab(${i})">
+      <div class="n"><span>SYS 0${i+1}</span>${cd}</div>
+      <div class="t">${p.name} ${mark}</div>
+      <div class="bar"><i class="${warn}" data-bar="${i}" style="width:${pct}%"></i></div></div>`;
+  }).join('');
+}
+function switchTab(i){active=i;resetInputs();setFb('');renderTabs();renderPuzzle();}
+
+function renderPuzzle(){
+  const p=puzzles[active],el=document.getElementById('puzzle');
+  if(p.solved){el.innerHTML=`<div class="pcard"><div class="htitle">${titleFor(p)}<div class="uline"></div></div><div class="prompt" style="color:var(--green)">✓ Subsystem secured. It won't reseed. Pivot to another tab.</div></div>`;return;}
+  let body=p.type==='code'?renderCode(p):p.type==='coord'?renderCoord(p):renderRelays(p);
+  el.innerHTML=`<div class="pcard" id="pcard">
+    <div class="pcard-ov" id="pcardov"><div class="glyph"></div><div class="sys" id="ovsys"></div><div class="msg" id="ovmsg"></div><div class="sm" id="ovsm"></div></div>
+    <div class="htitle">${titleFor(p)}<div class="uline"></div></div>
+    <div class="reseedcap">↻ this subsystem reseeds a <b>new target</b> if its timer hits 0:00 — only this one</div>
+    ${body}
+    <div class="demo">demo · the operator's protocol DB reads: <b>${demoText(p)}</b></div>
+  </div>`;
+  if(p.type==='code')bindCode();
+  if(p.type==='relays')renderSeq();
+}
+function titleFor(p){return p.type==='code'?'AUTHORIZATION':p.type==='coord'?'NODE LOCK':'RELAY COMMISSIONING';}
+
+/* code */
+function renderCode(p){
+  const box=(seg,label)=>{const sel=codeSel[seg];let inner='';if(sel){if(seg==='shape')inner=SHAPES.find(s=>s.id===sel).g;else if(seg==='symbol')inner=SYMS.find(s=>s.id===sel).g;else inner=`<span class="swfill" style="background:${COLORS.find(c=>c.id===sel).hex}"></span>`;}
+    const cls='cbox'+(sel?'':' empty')+(codeFocus===seg?' focus':'');
+    return `<div class="${cls}" data-seg="${seg}"><span class="seglbl">${label}</span>${inner}</div>`;};
+  return `<div class="prompt">Compose the code: <b>shape — color — symbol</b>. Your operator dictates all three. Tap a slot, then pick.</div>
+    <div class="coderow">${box('shape','SHAPE')}<span class="sep">—</span>${box('color','COLOR')}<span class="sep">—</span>${box('symbol','SYMBOL')}</div>
+    <div class="picker" id="picker"></div>
+    <button class="submit btn" onclick="submitCode()" ${codeReady()?'':'disabled'}>SUBMIT CODE</button>`;
+}
+function codeReady(){return codeSel.shape&&codeSel.color&&codeSel.symbol;}
+function bindCode(){document.querySelectorAll('.cbox').forEach(b=>b.onclick=()=>{codeFocus=b.dataset.seg;document.querySelectorAll('.cbox').forEach(x=>x.classList.toggle('focus',x.dataset.seg===codeFocus));renderPicker();});renderPicker();}
+function renderPicker(){const pk=document.getElementById('picker');if(!pk)return;let o='';if(codeFocus==='shape')o=SHAPES.map(s=>`<div class="opt" onclick="pickCode('shape','${s.id}')">${s.g}</div>`).join('');else if(codeFocus==='symbol')o=SYMS.map(s=>`<div class="opt" onclick="pickCode('symbol','${s.id}')">${s.g}</div>`).join('');else o=COLORS.map(c=>`<div class="opt" onclick="pickCode('color','${c.id}')"><span class="swatch" style="background:${c.hex}"></span></div>`).join('');pk.innerHTML=`<div class="ph">SELECT ${codeFocus.toUpperCase()}</div><div class="opts">${o}</div>`;}
+function pickCode(seg,id){codeSel[seg]=id;const order=['shape','color','symbol'];codeFocus=order.find(s=>!codeSel[s])||seg;renderPuzzle();}
+function submitCode(){if(!codeReady())return;const a=puzzles[active].answer;(codeSel.shape===a.shape&&codeSel.color===a.color&&codeSel.symbol===a.symbol)?solveOk():wrong();}
+
+/* coordinate lookup */
+function renderCoord(p){
+  const col=COLORS.find(c=>c.id===p.target.color),sh=SHAPES.find(s=>s.id===p.target.shape);
+  let cells='<div class="ghead"></div>'+COLS.map(c=>`<div class="ghead">${c}</div>`).join('');
+  ROWS.forEach(r=>{cells+=`<div class="rowlbl">${r}</div>`+COLS.map(c=>`<div class="cell" data-cell="${c}${r}" onclick="submitGrid('${c}${r}')">${c}${r}</div>`).join('');});
+  return `<div class="prompt">Lock the cell that matches this target. Read the <b>color</b> and <b>shape</b> aloud — your operator finds the coordinate in the protocol DB.</div>
+    <div class="entlbl">Target</div>
+    <div class="target">
+      <div class="tgt"><span class="tgtsw" style="background:${col.hex}"></span><span class="tgtlbl">${p.target.color.toUpperCase()}</span></div>
+      <div class="tgt"><span class="tgtshape">${sh.g}</span><span class="tgtlbl">${sh.n}</span></div>
+    </div>
+    <div class="gridwrap"><div class="grid5">${cells}</div></div>`;
+}
+function submitGrid(cell){
+  if(cell===puzzles[active].answer.cell)solveOk();
+  else{wrong();const c=document.querySelector(`[data-cell="${cell}"]`);if(c){c.classList.add('bad');setTimeout(()=>c.classList.remove('bad'),300);}}
+}
+
+/* relays */
+function renderRelays(){return `<div class="prompt">Energize the four relays in <b>commissioning order</b> — never alphabetical. The order is in the manual.</div><div class="seqshow" id="seqshow"></div><div class="relays">${RELAYS.map(r=>`<button class="relay" id="r-${r.id}" onclick="pushSeq('${r.id}')">${r.l}</button>`).join('')}</div><button class="submit btn" onclick="submitSeq()" style="margin-top:13px">SUBMIT SEQUENCE</button>`;}
+function pushSeq(id){if(seq.includes(id))return;seq.push(id);renderSeq();}
+function renderSeq(){const b=document.getElementById('seqshow');if(!b)return;b.innerHTML=seq.length?seq.map(id=>RELAYS.find(r=>r.id===id).l).join('  →  '):'<span class="ph">tap relays in order…</span>';seq.forEach(id=>{const x=document.getElementById('r-'+id);if(x)x.disabled=true;});}
+function submitSeq(){if(!seq.length)return;(seq.join('-')===puzzles[active].answer.order)?solveOk():(wrong(),seq=[],renderSeq(),RELAYS.forEach(r=>{const x=document.getElementById('r-'+r.id);if(x)x.disabled=false;}));}
+
+function demoText(p){
+  if(p.type==='code'){const s=SHAPES.find(x=>x.id===p.answer.shape),y=SYMS.find(x=>x.id===p.answer.symbol);return `${s.g} ${s.n} · ${p.answer.color.toUpperCase()} · ${y.g} ${p.answer.symbol.toUpperCase()}`;}
+  if(p.type==='coord'){const sh=SHAPES.find(s=>s.id===p.target.shape);return `${p.target.color.toUpperCase()} ${sh.g} ${sh.n} → ${p.answer.cell}`;}
+  return p.answer.order.toUpperCase().replace(/-/g,' → ');
+}
+function solveOk(){const p=puzzles[active];p.solved=true;setFb('✓ ACCESS GRANTED','ok');logEv(`sys 0${active+1} secured`,'green');renderTabs();renderPuzzle();if(puzzles.every(x=>x.solved))levelClear();}
+function wrong(){setFb('✕ ACCESS DENIED','bad');logEv(`sys 0${active+1} rejected`,'red');}
+function forceTimeout(){const p=puzzles[active];if(!p.solved&&!p.reseeding)p.t=0;}
+
+const CH='ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&*<>/';
+function scramble(el,final,dur){if(!el)return;const start=performance.now();(function s(now){const p=Math.min(1,(now-start)/dur);const rev=Math.floor(p*final.length);let o='';for(let i=0;i<final.length;i++)o+=i<rev?final[i]:(final[i]===' '?' ':CH[Math.floor(Math.random()*CH.length)]);el.textContent=o;if(p<1)requestAnimationFrame(s);else el.textContent=final;})(start);}
+
+function regenerate(i){
+  const p=puzzles[i];Object.assign(p,newPuzzle(p.type,p.name));p.reseeding=true;
+  if(i===active){
+    resetInputs();renderTabs();
+    const card=document.getElementById('pcard'),ov=document.getElementById('pcardov');
+    card.classList.add('reseeding');
+    document.getElementById('ovsys').textContent=`SUBSYSTEM 0${i+1} · ${titleFor(p)}`;
+    ov.className='pcard-ov show lost';document.getElementById('ovmsg').textContent='CONNECTION LOST';
+    scramble(document.getElementById('ovsm'),'packet loss 98% // target corrupted',700);
+    logEv(`sys 0${i+1} — connection lost`,'red');
+    setTimeout(()=>{ov.className='pcard-ov show regen';scramble(document.getElementById('ovmsg'),'REGENERATING',550);scramble(document.getElementById('ovsm'),'new target seeded // re-ask your operator',700);},1100);
+    setTimeout(()=>{p.reseeding=false;setFb('');renderPuzzle();renderTabs();logEv(`sys 0${i+1} reseeded`,'amber');},2700);
+  }else{
+    logEv(`sys 0${i+1} reseeded`,'amber');renderTabs();
+    setTimeout(()=>{p.reseeding=false;renderTabs();},2700);
+  }
+}
+
+function levelClear(){document.getElementById('cleartime').textContent=fmt((Date.now()-levelStart)/1000);document.getElementById('clear').classList.add('show');logEv('level 1 clear','green');}
+
+function tick(){
+  if(!puzzles)return;
+  document.getElementById('chrono').textContent=fmt((Date.now()-levelStart)/1000);
+  if(document.getElementById('clear').classList.contains('show'))return;
+  puzzles.forEach((p,i)=>{
+    if(p.solved||p.reseeding)return;
+    p.t-=1;
+    const cd=document.querySelector(`[data-cd="${i}"]`);if(cd){cd.textContent=fmt(p.t);cd.parentElement.className='cd'+(p.t<=8?' warn':'');}
+    const bar=document.querySelector(`[data-bar="${i}"]`);if(bar){bar.style.width=Math.max(0,p.t/p.max*100)+'%';bar.className=(p.t<=8?'warn':'');}
+    if(p.t<=0)regenerate(i);
+  });
+}
+
+resetLevel();
+setInterval(tick,1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DA B — Manual vs Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Special+Elite&family=JetBrains+Mono:wght@400;500;700&family=Archivo:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    /* console (digital) */
+    --c-bg:#0a0e0d; --c-panel:#0f1614; --c-line:#1f2b27; --c-ink:#e8f3ee; --c-mut:#7f998f; --c-acc:#6df0a3; --c-bad:#ff7a85;
+    /* manual (paper) */
+    --p-paper:#f2e8cf; --p-paper2:#ece0c0; --p-ink:#241b0d; --p-mut:#6b5b3d; --p-hi:#ffd86b; --p-red:#b23a2a; --p-rule:#cdbd95;
+    --disp:"Archivo",sans-serif; --serif:"Spectral",Georgia,serif; --type:"Special Elite",monospace; --mono:"JetBrains Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#100f0c;color:#e8e6df;font-family:var(--serif);-webkit-font-smoothing:antialiased;line-height:1.5}
+  .wrap{max-width:1180px;margin:0 auto;padding:40px 24px 80px}
+  .da-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+  .da-head h1{font-family:var(--disp);font-weight:800;font-size:30px;margin:0;letter-spacing:-.01em}
+  .da-head .tag{font-family:var(--mono);font-size:12px;color:var(--c-acc);border:1px solid #2a2a26;border-radius:999px;padding:4px 12px}
+  .lede{color:#a9a597;max-width:640px;margin:0 0 30px;font-size:15px;font-family:var(--disp);font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:22px;align-items:start}
+  .frame{border-radius:14px;overflow:hidden;box-shadow:0 30px 60px -30px rgba(0,0,0,.8)}
+  .flabel{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7c786c;padding:11px 15px;background:#16140f;border:1px solid #26231b;border-bottom:none;border-radius:14px 14px 0 0}
+
+  /* ---------- CONSOLE (digital) ---------- */
+  .console{background:
+      radial-gradient(100% 60% at 50% 0%, rgba(109,240,163,.06), transparent 60%),
+      linear-gradient(180deg,var(--c-panel),var(--c-bg));
+    border:1px solid var(--c-line);color:var(--c-ink);padding:20px;font-family:var(--mono)}
+  .c-top{display:flex;justify-content:space-between;font-size:12px;color:var(--c-mut);letter-spacing:.04em}
+  .c-top .t{color:var(--c-acc)}
+  .c-log{margin:14px 0;border-left:2px solid var(--c-line);padding-left:12px;font-size:12px;color:#5f7268;height:74px;overflow:hidden}
+  .c-log .n{color:var(--c-ink)}
+  .c-obj{border:1px solid var(--c-line);border-radius:10px;padding:16px;background:rgba(0,0,0,.25)}
+  .c-obj .k{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--c-acc)}
+  .c-obj h3{font-family:var(--disp);font-weight:800;font-size:22px;margin:7px 0 6px;color:#fff;letter-spacing:-.01em}
+  .c-obj p{margin:0;font-family:var(--serif);font-size:15px;color:#b9c8c0;line-height:1.45}
+  .c-in{display:flex;gap:10px;margin-top:14px}
+  .c-in .box{flex:1;border:1px solid var(--c-line);border-radius:9px;background:#060a09;padding:13px 14px;font-size:16px;color:var(--c-ink)}
+  .c-in .box .c{color:var(--c-acc)}
+  .c-in button{border:none;background:var(--c-acc);color:#04130b;font-family:var(--disp);font-weight:800;border-radius:9px;padding:0 20px;cursor:pointer;letter-spacing:.02em}
+  .c-fb{margin-top:12px;font-size:12px;color:var(--c-bad);height:16px;text-align:center}
+  .c-voice{margin-top:6px;font-size:11px;color:var(--c-mut);text-align:center;letter-spacing:.08em}
+
+  /* ---------- MANUAL (paper) ---------- */
+  .paper{background:
+      repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(120,90,40,.06) 28px),
+      linear-gradient(180deg,var(--p-paper),var(--p-paper2));
+    color:var(--p-ink);padding:22px 22px 18px;border:1px solid #2a2419;position:relative}
+  .paper:before{content:"";position:absolute;left:34px;top:0;bottom:0;width:1px;background:rgba(178,58,42,.35)}
+  .p-tabs{position:absolute;right:-1px;top:18px;display:flex;flex-direction:column;gap:6px}
+  .p-tabs span{width:10px;height:34px;border-radius:0 4px 4px 0;background:var(--p-rule)}
+  .p-tabs span:nth-child(1){background:#b23a2a}.p-tabs span:nth-child(2){background:#3a6b4f}.p-tabs span:nth-child(3){background:#caa23a}
+  .p-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--p-ink);padding-bottom:10px;margin-left:14px}
+  .p-head h3{font-family:var(--disp);font-weight:800;font-size:21px;margin:0;letter-spacing:-.01em}
+  .p-head .doc{font-family:var(--type);font-size:11px;color:var(--p-mut)}
+  .stamp{font-family:var(--type);font-size:12px;color:var(--p-red);border:2px solid var(--p-red);border-radius:4px;padding:3px 8px;transform:rotate(-7deg);opacity:.85;letter-spacing:.05em}
+  .p-body{margin-left:14px;padding-top:12px}
+  .p-sec{margin-bottom:14px}
+  .p-sec h4{font-family:var(--type);font-size:13px;margin:0 0 3px;letter-spacing:.02em}
+  .p-sec p{margin:0;font-size:15.5px;line-height:1.5}
+  mark{background:linear-gradient(180deg,transparent 55%,var(--p-hi) 55%);padding:0 2px;font-weight:600}
+  .answer{font-weight:700;background:var(--p-hi);padding:1px 5px;border-radius:2px}
+  .p-redir{font-family:var(--type);font-size:12.5px;color:var(--p-red);margin-top:6px;display:inline-block;border-bottom:1px dashed var(--p-red)}
+  .p-note{font-family:var(--serif);font-style:italic;font-size:13px;color:var(--p-mut);border-top:1px solid var(--p-rule);margin-top:6px;padding-top:9px}
+  .p-foot{font-family:var(--type);font-size:10px;color:var(--p-mut);text-align:center;margin-top:10px;letter-spacing:.06em}
+
+  /* ---------- LOBBY (split identity) ---------- */
+  .lobby{display:grid;grid-template-columns:1fr 1fr;min-height:280px}
+  .lobby .side{padding:20px}
+  .lobby .hk{background:linear-gradient(180deg,var(--c-panel),var(--c-bg));color:var(--c-ink);font-family:var(--mono);border-right:1px solid #000}
+  .lobby .op{background:linear-gradient(180deg,var(--p-paper),var(--p-paper2));color:var(--p-ink)}
+  .lobby .role{font-family:var(--disp);font-weight:800;font-size:13px;letter-spacing:.14em;text-transform:uppercase}
+  .lobby .hk .role{color:var(--c-acc)} .lobby .op .role{color:var(--p-red)}
+  .lobby .nm{font-size:18px;margin:8px 0 2px;font-weight:700}
+  .lobby .op .nm{font-family:var(--serif)}
+  .lobby .small{font-size:12.5px;opacity:.8}
+  .lobby .hk .small{color:var(--c-mut)} .lobby .op .small{color:var(--p-mut);font-family:var(--type)}
+  .lobby .gear{margin-top:16px;font-size:12px}
+  .lobby .ready{margin-top:auto}
+  .lobby .hk .sidecol{display:flex;flex-direction:column;height:100%}
+  .lobby .op .sidecol{display:flex;flex-direction:column;height:100%}
+  .codechip{font-family:var(--mono);font-weight:700;letter-spacing:.08em;background:rgba(109,240,163,.1);border:1px solid rgba(109,240,163,.35);color:var(--c-acc);padding:6px 10px;border-radius:7px;display:inline-block}
+  .rbtn{border:none;background:var(--c-acc);color:#04130b;font-family:var(--disp);font-weight:800;border-radius:9px;padding:13px;cursor:pointer;width:100%;letter-spacing:.02em}
+  .rbtn.paper{background:var(--p-ink);color:var(--p-paper)}
+  .lobtitle{grid-column:1/-1;background:#16140f;color:#e8e6df;text-align:center;padding:14px;font-family:var(--disp);font-weight:800;font-size:20px;letter-spacing:.02em;border-bottom:1px solid #26231b}
+  .lobtitle small{display:block;font-family:var(--serif);font-weight:400;font-size:13px;color:#a9a597;font-style:italic;margin-top:3px}
+
+  /* ---------- COMPLETE ---------- */
+  .done{grid-column:1/-1}
+  .done .inner{background:linear-gradient(180deg,var(--c-panel),var(--c-bg));border:1px solid var(--c-line);padding:28px;display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap;font-family:var(--mono)}
+  .done h2{font-family:var(--disp);font-weight:800;font-size:36px;margin:0;color:var(--c-acc);letter-spacing:-.01em}
+  .done .sub{font-family:var(--serif);color:#b9c8c0;font-size:15px;margin-top:5px;font-style:italic}
+  .done .t{font-size:40px;color:#fff} .done .l{font-size:11px;color:var(--c-mut);letter-spacing:.16em;text-transform:uppercase}
+  .done .acts{display:flex;gap:10px;flex-wrap:wrap}
+  .done .acts button{font-family:var(--disp);font-weight:700;border-radius:9px;padding:13px 18px;cursor:pointer;border:1px solid var(--c-line);background:transparent;color:var(--c-ink)}
+  .done .acts button.p{background:var(--c-acc);color:#04130b;border:none}
+  @media(max-width:380px){.lobby{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="da-head"><h1>Manual vs Console</h1><span class="tag">DA · B</span></div>
+  <p class="lede">The two roles live in two worlds. The operator gets a real printed dossier — cream paper, serif, highlighter, stamps — maximum legibility. The hacker gets a crisp digital console, high-contrast, no grunge. The analog↔digital clash is the joke, and each side uses its most readable medium.</p>
+
+  <div class="grid">
+
+    <!-- LOBBY -->
+    <div class="frame" style="grid-column:1/-1">
+      <div class="flabel">Screen · Lobby</div>
+      <div class="lobby">
+        <div class="lobtitle">WHISPERING HACKER · <span class="codechip">CIPHER-07</span><small>one types, one reads, you only have your voices</small></div>
+        <div class="side hk"><div class="sidecol">
+          <div class="role">▸ Console — that's you</div>
+          <div class="nm">You · Hacker</div>
+          <div class="small">you drive the terminal. you have no answers.</div>
+          <div class="gear">● mic on &nbsp; ○ voice connecting…</div>
+          <div class="ready" style="padding-top:16px"><button class="rbtn">Ready ▸</button></div>
+        </div></div>
+        <div class="side op"><div class="sidecol">
+          <div class="role">▦ Manual — your partner</div>
+          <div class="nm">Béatrice · Operator</div>
+          <div class="small">holds the dossier. reads it to you.</div>
+          <div class="gear" style="font-family:var(--type)">status: getting comfy…</div>
+          <div class="ready" style="padding-top:16px"><button class="rbtn paper">Ready</button></div>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- HACKER -->
+    <div class="frame">
+      <div class="flabel">Screen · Hacker (console)</div>
+      <div class="console">
+        <div class="c-top"><span>CIPHER-07 · LVL 1 · 1/3</span><span class="t">02:14</span></div>
+        <div class="c-log">
+          <div>&gt; accessing node…</div>
+          <div>&gt; handshake complete</div>
+          <div>&gt; tunnel established</div>
+          <div class="n">&gt; awaiting input_</div>
+        </div>
+        <div class="c-obj">
+          <div class="k">Objective</div>
+          <h3>Authenticate node</h3>
+          <p>Type the access codeword for <b style="color:#fff">Sector 7</b>. Ask your operator.</p>
+        </div>
+        <div class="c-in">
+          <div class="box"><span class="c">&gt;</span> type the codeword<span style="opacity:.4">|</span></div>
+          <button>Send</button>
+        </div>
+        <div class="c-fb">✕ access denied — try again</div>
+        <div class="c-voice">● voice channel open</div>
+      </div>
+    </div>
+
+    <!-- OPERATOR -->
+    <div class="frame">
+      <div class="flabel">Screen · Operator (manual)</div>
+      <div class="paper">
+        <div class="p-tabs"><span></span><span></span><span></span></div>
+        <div class="p-head">
+          <div><h3>Access Codewords</h3><div class="doc">OPERATIONS MANUAL · DOC 1/3</div></div>
+          <div class="stamp">SECTION 3.2</div>
+        </div>
+        <div class="p-body">
+          <div class="p-sec">
+            <h4>3.2 — Sector codewords</h4>
+            <p>Every sector has a single-word access codeword. Sectors 1–6 are on the <mark>previous page</mark>.</p>
+            <span class="p-redir">→ For Sector 7, see note 3.2-b</span>
+          </div>
+          <div class="p-sec">
+            <h4>Note 3.2-b</h4>
+            <p>Sector 7 was re-keyed last quarter. The current codeword is <span class="answer">THISTLE</span> — all caps, no spaces.</p>
+          </div>
+          <div class="p-note">⚠ Reminder: never feed the server after midnight.</div>
+          <div class="p-foot">YOU CAN'T TOUCH THE TERMINAL — READ IT OUT LOUD</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPLETE -->
+    <div class="frame done">
+      <div class="flabel">Screen · Mission complete</div>
+      <div class="inner">
+        <div><h2>ACCESS GRANTED</h2><div class="sub">You &amp; Béatrice breached the node.</div></div>
+        <div style="text-align:center"><div class="l">completion time</div><div class="t">06:24</div></div>
+        <div class="acts"><button class="p">Play again</button><button>New room</button><button>Copy result link</button></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

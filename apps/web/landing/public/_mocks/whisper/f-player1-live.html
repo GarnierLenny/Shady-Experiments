@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>P1 — interactive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#08090a; --panel:#0e1112; --line:#1d2123; --line2:#2a2f31;
+    --ink:#ededed; --mut:#9a9d9e; --faint:#5a5e60; --dim:#3a3e40;
+    --amber:#e9ba4c; --amber-b:#f8d066; --green:#4ec46a; --red:#ef5b54;
+    --mono:"JetBrains Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#000;color:var(--ink);font-family:var(--mono);-webkit-font-smoothing:antialiased}
+  .page{max-width:1280px;margin:0 auto;padding:26px 22px 70px}
+  .hint-banner{border:1px solid var(--line2);border-radius:4px;padding:12px 16px;margin-bottom:18px;color:var(--mut);font-size:12.5px;line-height:1.6}
+  .hint-banner b{color:var(--amber)}
+
+  .device{background:radial-gradient(120% 90% at 80% -10%, rgba(233,186,76,.05), transparent 55%), var(--bg);
+    border:1px solid var(--line);border-radius:6px;display:grid;grid-template-rows:auto 1fr auto;min-height:680px;overflow:hidden;position:relative}
+
+  .top{display:flex;align-items:center;gap:30px;padding:16px 22px;border-bottom:1px solid var(--line)}
+  .brand{font-weight:700;font-size:15px;letter-spacing:.06em}
+  .brand em{color:var(--amber);font-style:normal;font-weight:500;margin-left:8px;font-size:13px}
+  .top .spacer{flex:1}
+  .kv .k{font-size:10px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase}
+  .kv .v{font-size:13px;margin-top:3px}
+  .kv .v.green{color:var(--green)} .dotg{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;box-shadow:0 0 8px var(--green)}
+  .abort{border:1px solid var(--red);color:var(--red);border-radius:4px;padding:9px 16px;font-size:13px;letter-spacing:.08em;display:flex;align-items:center;gap:10px;cursor:pointer}
+  .abort .sq{width:11px;height:11px;border:1px solid var(--red)}
+
+  .body{display:grid;grid-template-columns:230px 1fr 250px}
+  .col{padding:24px 22px}
+  .col.left{border-right:1px solid var(--line)}
+  .col.right{border-left:1px solid var(--line)}
+  .lbl{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber)}
+  .lbl.muted{color:var(--faint)}
+  .obj p{color:var(--mut);font-size:13px;line-height:1.7;margin:10px 0 0}
+  .rule{height:1px;background:var(--line);margin:20px 0}
+  .big{font-size:30px;letter-spacing:.04em;margin-top:8px}
+  .big.amber{color:var(--amber)}
+  .sub{font-size:11px;color:var(--faint);margin-top:4px;letter-spacing:.06em}
+  .link{display:flex;align-items:center;gap:8px;margin-top:12px}
+  .node{width:42px;height:42px;border-radius:50%;border:1px solid var(--amber);color:var(--amber);display:grid;place-items:center;font-size:12px;box-shadow:0 0 14px rgba(233,186,76,.2)}
+  .dots{flex:1;border-top:1px dashed var(--line2);height:1px}
+  .linkcap{font-size:11px;color:var(--faint);margin-top:10px}
+
+  .center{padding:22px;position:relative}
+  .hud{position:relative;border:1px solid var(--line2);border-radius:2px;padding:24px 28px;min-height:540px}
+  .corner{position:absolute;width:16px;height:16px;border:2px solid var(--amber);opacity:.8}
+  .corner.tl{top:-1px;left:-1px;border-right:none;border-bottom:none}
+  .corner.tr{top:-1px;right:-1px;border-left:none;border-bottom:none}
+  .corner.bl{bottom:-1px;left:-1px;border-right:none;border-top:none}
+  .corner.br{bottom:-1px;right:-1px;border-left:none;border-top:none}
+
+  .tabs{display:flex;gap:8px;margin-bottom:24px}
+  .tab{flex:1;border:1px solid var(--line2);border-radius:3px;padding:10px 12px;cursor:pointer;background:rgba(255,255,255,.01);transition:.12s}
+  .tab .n{font-size:10px;letter-spacing:.12em;color:var(--faint);display:flex;justify-content:space-between}
+  .tab .n .cd{color:var(--mut)}
+  .tab .t{font-size:13px;margin-top:6px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .tab.active{border-color:var(--amber);background:rgba(233,186,76,.08)}
+  .tab.active .n{color:var(--amber)} .tab.active .t{color:var(--amber-b)}
+  .tab.done{border-color:rgba(78,196,106,.5)} .tab.done .chk{color:var(--green)} .tab.done .cd{color:var(--green)}
+  .tab .cd.warn{color:var(--red)!important}
+  .tab.flash{animation:flash .6s}
+  @keyframes flash{0%,100%{background:rgba(255,255,255,.01)}40%{background:rgba(239,91,84,.18)}}
+
+  .htitle{font-size:28px;letter-spacing:.05em;margin:2px 0 0}
+  .uline{height:2px;width:110px;background:var(--amber);margin:12px 0 26px}
+  .prompt{color:var(--mut);font-size:14px;line-height:1.6;margin-bottom:22px}
+  .prompt b{color:var(--ink)}
+  .param{color:var(--amber-b)}
+
+  .entlbl{font-size:11px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase;margin-bottom:12px}
+  .field{display:flex;gap:12px}
+  .field input{flex:1;background:#050607;border:1px solid var(--line2);border-radius:3px;color:var(--ink);font-family:var(--mono);font-size:20px;letter-spacing:.12em;text-transform:uppercase;padding:16px 18px;outline:none}
+  .field input:focus{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+  .btn{border:1px solid var(--line2);background:rgba(255,255,255,.015);color:var(--ink);font-family:var(--mono);font-size:13px;letter-spacing:.1em;padding:0 22px;border-radius:3px;cursor:pointer}
+  .btn:hover{border-color:var(--amber);color:var(--amber-b)}
+  .submit{display:block;width:100%;text-align:center;padding:18px;font-size:14px;letter-spacing:.14em;margin-top:18px}
+
+  .swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+  .sw{aspect-ratio:1;border:1px solid var(--line2);border-radius:3px;cursor:pointer;transition:.12s}
+  .sw:hover{transform:scale(1.06);border-color:var(--amber)}
+
+  .relays{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .relay{border:1px solid var(--line2);background:rgba(255,255,255,.01);color:var(--ink);font-family:var(--mono);font-size:13px;letter-spacing:.08em;padding:18px 6px;border-radius:3px;cursor:pointer}
+  .relay:hover{border-color:var(--amber);color:var(--amber-b)}
+  .relay:disabled{opacity:.3;cursor:not-allowed}
+  .seqshow{min-height:40px;border:1px solid var(--line);border-radius:3px;margin-bottom:14px;padding:11px 14px;color:var(--amber-b);font-size:13px;letter-spacing:.08em}
+  .seqshow .ph{color:var(--faint)}
+
+  .fb{height:20px;margin-top:14px;text-align:center;font-size:13px;letter-spacing:.1em}
+  .fb.bad{color:var(--red)} .fb.ok{color:var(--green)}
+  .demo{margin-top:18px;border-top:1px dashed var(--line);padding-top:12px;font-size:11px;color:var(--dim);letter-spacing:.06em}
+  .demo b{color:var(--faint)}
+
+  .rbox{border:1px solid var(--line);border-radius:3px;padding:14px;margin-top:12px;font-size:12.5px;color:var(--mut);line-height:1.6}
+  .voiceline{color:var(--amber)}
+  .log{margin-top:12px;font-size:12px;line-height:1.85;max-height:200px;overflow:hidden}
+  .log .row{display:flex;gap:10px}
+  .log .ts{color:var(--faint)} .log .ev{color:var(--mut)}
+  .log .row.amber .ev{color:var(--amber)} .log .row.red .ev{color:var(--red)} .log .row.green .ev{color:var(--green)}
+
+  .bot{display:flex;align-items:center;gap:18px;padding:14px 22px;border-top:1px solid var(--line);font-size:11px;color:var(--faint);letter-spacing:.08em}
+  .wlogo{width:26px;height:26px;border:1px solid var(--line2);display:grid;place-items:center;color:var(--mut)}
+  .bot .spacer{flex:1}
+
+  /* regenerate overlay */
+  .overlay{position:absolute;inset:0;background:rgba(4,5,6,.92);display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:20;backdrop-filter:blur(2px)}
+  .overlay.show{display:flex}
+  .overlay .glyph{width:60px;height:60px;border:2px solid var(--red);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite}
+  .overlay.regen .glyph{border-color:var(--amber);border-top-color:transparent}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .overlay .msg{font-size:22px;letter-spacing:.2em}
+  .overlay.lost .msg{color:var(--red)} .overlay.regen .msg{color:var(--amber-b)}
+  .overlay .sm{font-size:12px;color:var(--faint);letter-spacing:.1em}
+
+  /* level clear */
+  .clear{position:absolute;inset:0;background:rgba(4,5,6,.94);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:30}
+  .clear.show{display:flex}
+  .clear h2{font-size:40px;color:var(--green);letter-spacing:.08em;margin:0}
+  .clear .t{font-size:30px;color:var(--ink)}
+  .clear .l{font-size:11px;letter-spacing:.16em;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hint-banner">
+    <b>Interactive P1 mock.</b> Each task has its own countdown. Let one hit 0 (or hit <b>FORCE TIMEOUT</b> bottom-left) to see <b>CONNECTION LOST → REGENERATING</b> reroll its answer. To solve solo, use the dim <b>demo</b> line under each task (that's what the operator's PDF would say). Level chrono tracks total time.
+  </div>
+
+  <div class="device">
+    <div class="overlay" id="overlay"><div class="glyph"></div><div class="msg" id="ovmsg">CONNECTION LOST</div><div class="sm" id="ovsm">signal dropped on this task…</div></div>
+    <div class="clear" id="clear"><div class="l">LEVEL 1 — WHISPER</div><h2>LEVEL CLEAR</h2><div class="l">total time</div><div class="t" id="cleartime">00:00</div><button class="btn" style="margin-top:10px;padding:12px 22px" onclick="resetLevel()">Run it again</button></div>
+
+    <div class="top">
+      <div class="brand">WHISPERING HACKER <em>EXP #002</em></div>
+      <div class="spacer"></div>
+      <div class="kv"><div class="k">Session</div><div class="v">WH-002-A7F3</div></div>
+      <div class="kv"><div class="k">Connection</div><div class="v green"><span class="dotg"></span>SECURE</div></div>
+      <div class="abort">ABORT <span class="sq"></span></div>
+    </div>
+
+    <div class="body">
+      <div class="col left">
+        <div class="obj"><div class="lbl">Objective</div><p>Clear the level's three tasks. Answers live only in your operator's manual — ask out loud, fast.</p></div>
+        <div class="rule"></div>
+        <div class="lbl muted">Level</div><div class="big">1 <span style="color:var(--faint)">/ 3</span></div><div class="sub">WHISPER · clean line</div>
+        <div class="rule"></div>
+        <div class="lbl muted">Level time</div><div class="big amber" id="chrono">00:00</div><div class="sub">no limit · whole level</div>
+        <div class="rule"></div>
+        <div class="lbl muted">Link status</div>
+        <div class="link"><div class="node">P1</div><div class="dots"></div><div class="node">P2</div></div>
+        <div class="linkcap">voice connected · both online</div>
+        <div class="rule"></div>
+        <button class="btn" style="padding:10px 12px;font-size:11px;width:100%" onclick="forceTimeout()">⚡ FORCE TIMEOUT (demo)</button>
+      </div>
+
+      <div class="center">
+        <div class="hud">
+          <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+          <div class="tabs" id="tabs"></div>
+          <div id="puzzle"></div>
+          <div class="fb" id="fb"></div>
+        </div>
+      </div>
+
+      <div class="col right">
+        <div class="lbl muted">Voice link</div>
+        <div class="rbox"><span class="voiceline">● P2 connected</span><br>The line gets noisier each level.</div>
+        <div class="lbl muted" style="margin-top:20px">Log</div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+
+    <div class="bot"><div class="wlogo">W</div><div><span style="color:var(--faint)">PROTOCOL</span> &nbsp; WHSP v1.0</div><div class="spacer"></div><div><span style="color:var(--faint)">SESSION</span> &nbsp; WH-002-A7F3</div></div>
+  </div>
+</div>
+
+<script>
+const PUZZLE_SECONDS = 30;
+const COLORS = [
+  {id:'crimson',hex:'#e5484d'},{id:'amber',hex:'#f5a524'},{id:'emerald',hex:'#30a46c'},
+  {id:'azure',hex:'#3b82f6'},{id:'violet',hex:'#8b5cf6'},{id:'bone',hex:'#e8e4d8'}
+];
+const SECTORS = {2:'CEDAR',3:'WILLOW',5:'THISTLE',7:'BRAMBLE',9:'FENNEL'};
+const PROTOCOLS = {DELTA:'amber',SIGMA:'emerald',OMEGA:'crimson',KILO:'azure'};
+const RELAYS = [{id:'gantry',l:'GANTRY'},{id:'boiler',l:'BOILER'},{id:'dynamo',l:'DYNAMO'},{id:'latch',l:'LATCH'}];
+const rand = a => a[Math.floor(Math.random()*a.length)];
+const keys = o => Object.keys(o);
+
+let puzzles, active, levelStart, busy=false, seq=[];
+
+function genAccess(){const n=rand(keys(SECTORS));return{param:n,answer:SECTORS[n]};}
+function genOverride(){const p=rand(keys(PROTOCOLS));return{param:p,answer:PROTOCOLS[p]};}
+function genRelays(){const o=[...RELAYS].sort(()=>Math.random()-.5).map(r=>r.id);return{param:null,answer:o.join('-')};}
+
+function newPuzzle(type,name){
+  const g = type==='access'?genAccess():type==='override'?genOverride():genRelays();
+  return {type,name,solved:false,t:PUZZLE_SECONDS,...g};
+}
+function resetLevel(){
+  puzzles=[newPuzzle('access','ACCESS'),newPuzzle('override','OVERRIDE'),newPuzzle('relays','RELAYS')];
+  active=0;seq=[];busy=false;levelStart=Date.now();
+  document.getElementById('clear').classList.remove('show');
+  logEv('session started','amber');
+  renderTabs();renderPuzzle();
+}
+
+function fmt(s){s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+
+function logEv(text,cls=''){
+  const log=document.getElementById('log');
+  const ts=new Date().toLocaleTimeString('en-GB');
+  const row=document.createElement('div');row.className='row '+cls;
+  row.innerHTML=`<span class="ts">${ts.slice(0,8)}</span><span class="ev">${text}</span>`;
+  log.prepend(row);while(log.children.length>7)log.removeChild(log.lastChild);
+}
+
+function renderTabs(){
+  const el=document.getElementById('tabs');
+  el.innerHTML=puzzles.map((p,i)=>{
+    const cls=['tab',i===active?'active':'',p.solved?'done':''].join(' ');
+    const cd=p.solved?'✓':fmt(p.t);
+    const cdcls=(!p.solved&&p.t<=10)?'cd warn':'cd';
+    const mark=p.solved?'<span class="chk">✓</span>':(i===active?'<span class="chk">●</span>':'<span class="chk" style="color:var(--faint)">○</span>');
+    return `<div class="${cls}" data-i="${i}" onclick="switchTab(${i})">
+      <div class="n"><span>TASK 0${i+1}</span><span class="${cdcls}" data-cd="${i}">${cd}</span></div>
+      <div class="t">${p.name} ${mark}</div></div>`;
+  }).join('');
+}
+
+function switchTab(i){active=i;seq=[];setFb('');renderTabs();renderPuzzle();}
+
+function renderPuzzle(){
+  const p=puzzles[active], el=document.getElementById('puzzle');
+  if(p.solved){
+    el.innerHTML=`<div class="htitle">${p.name}<div class="uline"></div></div>
+      <div class="prompt" style="color:var(--green)">✓ Task secured. Move to another tab.</div>`;
+    return;
+  }
+  let inner='';
+  if(p.type==='access'){
+    inner=`<div class="prompt">Enter the access codeword for <span class="param">SECTOR ${p.param}</span>. Your operator has the table.</div>
+      <div class="entlbl">Enter code</div>
+      <div class="field"><input id="ti" autocomplete="off" placeholder="codeword" onkeydown="if(event.key==='Enter')submitText()"><button class="btn" onclick="submitText()">SUBMIT</button></div>`;
+  } else if(p.type==='override'){
+    inner=`<div class="prompt">Protocol <span class="param">${p.param}</span> is active. Select its override color — six swatches, no labels.</div>
+      <div class="entlbl">Select color</div>
+      <div class="swatches">${COLORS.map(c=>`<div class="sw" style="background:${c.hex}" title="" onclick="submitChoice('${c.id}')"></div>`).join('')}</div>`;
+  } else {
+    inner=`<div class="prompt">Energize the four relays in <b>commissioning order</b>. Your operator has the sequence.</div>
+      <div class="seqshow" id="seqshow"><span class="ph">tap relays in order…</span></div>
+      <div class="relays">${RELAYS.map(r=>`<button class="relay" id="r-${r.id}" onclick="pushSeq('${r.id}')">${r.l}</button>`).join('')}</div>
+      <button class="submit btn" onclick="submitSeq()">SUBMIT SEQUENCE</button>`;
+  }
+  el.innerHTML=`<div class="htitle">${p.name}<div class="uline"></div></div>${inner}
+    <div class="demo">demo · operator's manual would say: <b>${demoText(p)}</b></div>`;
+  const ti=document.getElementById('ti');if(ti)ti.focus();
+  if(p.type==='relays')renderSeq();
+}
+function demoText(p){
+  if(p.type==='access')return `Sector ${p.param} → ${p.answer}`;
+  if(p.type==='override')return `Protocol ${p.param} → ${p.answer.toUpperCase()}`;
+  return p.answer.toUpperCase().replace(/-/g,' → ');
+}
+
+function setFb(t,cls=''){const fb=document.getElementById('fb');fb.className='fb '+cls;fb.textContent=t;}
+
+function solveOk(){
+  const p=puzzles[active];p.solved=true;setFb('✓ ACCESS GRANTED','ok');
+  logEv(`task 0${active+1} secured`,'green');renderTabs();renderPuzzle();
+  if(puzzles.every(x=>x.solved))levelClear();
+}
+function wrong(){setFb('✕ ACCESS DENIED','bad');logEv(`task 0${active+1} denied`,'red');}
+
+function submitText(){const v=(document.getElementById('ti').value||'').trim().toUpperCase();if(!v)return;v===puzzles[active].answer.toUpperCase()?solveOk():wrong();}
+function submitChoice(id){id===puzzles[active].answer?solveOk():wrong();}
+function pushSeq(id){if(seq.includes(id))return;seq.push(id);renderSeq();}
+function renderSeq(){
+  const box=document.getElementById('seqshow');if(!box)return;
+  box.innerHTML=seq.length?seq.map(id=>RELAYS.find(r=>r.id===id).l).join('  →  '):'<span class="ph">tap relays in order…</span>';
+  seq.forEach(id=>{const b=document.getElementById('r-'+id);if(b)b.disabled=true;});
+}
+function submitSeq(){if(!seq.length)return;(seq.join('-')===puzzles[active].answer)?solveOk():(wrong(),seq=[],renderSeq(),RELAYS.forEach(r=>{const b=document.getElementById('r-'+r.id);if(b)b.disabled=false;}));}
+
+function forceTimeout(){const p=puzzles[active];if(!p.solved)p.t=0;}
+
+function regenerate(i){
+  const p=puzzles[i];const fresh=newPuzzle(p.type,p.name);Object.assign(p,fresh);
+  if(i===active){
+    busy=true;seq=[];
+    const ov=document.getElementById('overlay');
+    ov.className='overlay show lost';document.getElementById('ovmsg').textContent='CONNECTION LOST';document.getElementById('ovsm').textContent='signal dropped on this task…';
+    logEv(`task 0${i+1} — connection lost`,'red');
+    setTimeout(()=>{ov.className='overlay show regen';document.getElementById('ovmsg').textContent='REGENERATING…';document.getElementById('ovsm').textContent='new code incoming — re-ask your operator';},1100);
+    setTimeout(()=>{ov.className='overlay';busy=false;setFb('');renderPuzzle();renderTabs();logEv(`task 0${i+1} regenerated`,'amber');},2600);
+  } else {
+    logEv(`task 0${i+1} regenerated`,'amber');
+    const t=document.querySelector(`.tab[data-i="${i}"]`);if(t){t.classList.add('flash');setTimeout(()=>t.classList.remove('flash'),600);}
+    renderTabs();
+  }
+}
+
+function levelClear(){
+  const total=(Date.now()-levelStart)/1000;
+  document.getElementById('cleartime').textContent=fmt(total);
+  document.getElementById('clear').classList.add('show');
+  logEv('level 1 clear','green');
+}
+
+function tick(){
+  if(!puzzles)return;
+  document.getElementById('chrono').textContent=fmt((Date.now()-levelStart)/1000);
+  if(document.getElementById('clear').classList.contains('show'))return;
+  puzzles.forEach((p,i)=>{
+    if(p.solved)return;
+    if(busy&&i===active)return; // paused during its own regeneration
+    p.t-=1;
+    const cd=document.querySelector(`[data-cd="${i}"]`);
+    if(cd){cd.textContent=fmt(p.t);cd.className=p.t<=10?'cd warn':'cd';}
+    if(p.t<=0)regenerate(i);
+  });
+}
+
+resetLevel();
+setInterval(tick,1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DA D — Friendly Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#14181b; --bg2:#191e22; --panel:#1d242a; --line:#2c353c; --line2:#39454d;
+    --ink:#e9f1ec; --mut:#9fb2ab; --faint:#6c7d77;
+    --grn:#5ef08f; --grn-d:#1f6f44; --amber:#ffc266; --amber-d:#7a5a25; --bad:#ff7b86;
+    --mono:"IBM Plex Mono",monospace; --sans:"IBM Plex Sans",sans-serif; --r:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:
+      radial-gradient(110% 70% at 50% -10%, rgba(94,240,143,.06), transparent 55%),
+      var(--bg);
+    color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.55}
+  .wrap{max-width:1180px;margin:0 auto;padding:40px 24px 80px}
+  .da-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+  .da-head h1{font-family:var(--mono);font-weight:700;font-size:28px;margin:0;color:var(--grn)}
+  .da-head .tag{font-family:var(--mono);font-size:12px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:4px 12px}
+  .lede{color:var(--mut);max-width:640px;margin:0 0 30px;font-size:15px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:22px;align-items:start}
+  .screen{background:linear-gradient(180deg,var(--bg2),var(--bg));border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  .label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:11px 15px;border-bottom:1px solid var(--line)}
+  .pad{padding:20px}
+  .mono{font-family:var(--mono)}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .btn{width:100%;border:none;border-radius:10px;font-family:var(--mono);font-weight:600;font-size:15px;padding:14px;cursor:pointer;background:var(--grn);color:#06210f}
+  .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--ink)}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--mut)}
+
+  /* prompt header */
+  .prompt{font-family:var(--mono);font-size:13px;color:var(--grn)}
+  .prompt .u{color:var(--faint)}
+
+  /* LOBBY */
+  .lobby h2{font-family:var(--mono);font-weight:600;font-size:22px;margin:10px 0 4px}
+  .code{font-family:var(--mono);font-weight:600;font-size:18px;color:var(--grn);background:rgba(94,240,143,.08);border:1px solid var(--grn-d);border-radius:8px;padding:6px 12px;display:inline-flex;gap:10px;align-items:center}
+  .copy{font-size:11px;color:var(--faint);cursor:pointer;border-left:1px solid var(--grn-d);padding-left:10px}
+  .players{margin:18px 0;display:flex;flex-direction:column;gap:10px}
+  .prow{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--panel)}
+  .prow .l{display:flex;align-items:center;gap:10px}
+  .tagrole{font-family:var(--mono);font-size:11px;letter-spacing:.06em;border-radius:6px;padding:3px 8px;border:1px solid}
+  .tagrole.h{color:var(--grn);border-color:var(--grn-d);background:rgba(94,240,143,.08)}
+  .tagrole.o{color:var(--amber);border-color:var(--amber-d);background:rgba(255,194,102,.08)}
+  .nm{font-weight:600}
+  .st{font-size:12.5px;color:var(--mut)}
+  .explain{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 15px;font-size:14px;color:var(--ink);margin-bottom:16px}
+  .explain b{color:var(--grn)} .explain .o{color:var(--amber)}
+  .status{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+
+  /* HACKER */
+  .hk-top{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:12.5px;color:var(--mut)}
+  .hk-top .t{color:var(--grn);font-weight:600}
+  .log{margin:14px 0;border:1px solid var(--line);border-radius:9px;background:rgba(0,0,0,.22);padding:12px;font-family:var(--mono);font-size:12.5px;color:var(--faint);height:80px;overflow:hidden}
+  .log .n{color:var(--ink)}
+  .obj{border:1px solid var(--grn-d);background:rgba(94,240,143,.05);border-radius:10px;padding:16px}
+  .obj .k{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--grn)}
+  .obj h3{font-family:var(--mono);font-weight:600;font-size:19px;margin:7px 0 6px}
+  .obj p{margin:0;color:var(--mut);font-size:14.5px}
+  .inrow{display:flex;gap:10px;margin-top:14px}
+  .input{flex:1;display:flex;gap:8px;align-items:center;border:1px solid var(--line2);border-radius:9px;background:rgba(0,0,0,.28);padding:13px;font-family:var(--mono);font-size:16px}
+  .input .c{color:var(--grn)}
+  .send{border:none;background:var(--grn);color:#06210f;border-radius:9px;font-family:var(--mono);font-weight:600;padding:0 18px;cursor:pointer}
+  .fb{margin-top:12px;text-align:center;font-family:var(--mono);font-size:12.5px;color:var(--bad);height:16px}
+
+  /* OPERATOR */
+  .man{border:1px solid var(--amber-d);border-radius:10px;background:rgba(255,194,102,.05);overflow:hidden}
+  .man .mh{display:flex;justify-content:space-between;align-items:center;padding:12px 15px;border-bottom:1px solid var(--amber-d)}
+  .man .mh h3{font-family:var(--mono);font-weight:600;font-size:17px;margin:0;color:var(--amber)}
+  .man .ref{font-family:var(--mono);font-size:11px;color:var(--amber);border:1px solid var(--amber-d);border-radius:6px;padding:3px 7px}
+  .man .body{padding:15px}
+  .sec{margin-bottom:14px}
+  .sec h4{margin:0 0 4px;font-family:var(--mono);font-size:13px;color:#ffd79a}
+  .sec p{margin:0;font-size:14.5px;color:#ecdcc2}
+  .redir{display:inline-block;margin-top:6px;font-family:var(--mono);font-size:12.5px;color:var(--amber);background:rgba(255,194,102,.1);border:1px dashed var(--amber-d);border-radius:7px;padding:4px 9px}
+  .ans{color:#fff;font-weight:700}
+  .note{margin-top:8px;font-size:12.5px;font-style:italic;color:var(--faint);border-top:1px solid var(--line);padding-top:10px}
+  .cant{margin-top:12px;text-align:center;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--amber-d)}
+
+  /* COMPLETE */
+  .done{grid-column:1/-1}
+  .done .inner{display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap;padding:26px 22px}
+  .done h2{font-family:var(--mono);font-weight:700;font-size:34px;margin:0;color:var(--grn)}
+  .done .sub{color:var(--mut);font-size:14px;margin-top:5px}
+  .done .t{font-family:var(--mono);font-size:38px;color:var(--ink)} .done .l{font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.14em;text-transform:uppercase}
+  .done .acts{display:flex;gap:10px;flex-wrap:wrap}.done .acts .btn{width:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="da-head"><h1>Friendly Terminal</h1><span class="tag">DA · D</span></div>
+  <p class="lede">Keep the terminal soul, make it human. Warm charcoal instead of pure black, a brighter readable green + amber, sentence-case copy, a real sans for prose, generous spacing, glow only where it matters, no scanline mud. Lowest-risk evolution of what's there — just legible.</p>
+
+  <div class="grid">
+
+    <!-- LOBBY -->
+    <section class="screen lobby">
+      <div class="label">Screen · Lobby</div>
+      <div class="pad">
+        <div class="prompt"><span class="u">root@whisper</span>:~$ room --secure</div>
+        <h2>Whispering Hacker</h2>
+        <div class="code">CIPHER-07 <span class="copy">copy link</span></div>
+        <div class="players">
+          <div class="prow"><div class="l"><span class="tagrole h">HACKER</span><span class="nm">You</span></div><span class="st">ready</span></div>
+          <div class="prow"><div class="l"><span class="tagrole o">OPERATOR</span><span class="nm">Béatrice</span></div><span class="st">getting set…</span></div>
+        </div>
+        <div class="explain">You're the <b>hacker</b> — you get the terminal and no answers. Béatrice is the <span class="o">operator</span> — she has the manual. You can only talk by voice.</div>
+        <button class="btn">Ready — start the mission</button>
+        <div class="status"><span class="pill"><span class="dot" style="background:var(--grn)"></span>mic on</span><span class="pill"><span class="dot" style="background:var(--amber)"></span>connecting voice…</span></div>
+      </div>
+    </section>
+
+    <!-- HACKER -->
+    <section class="screen">
+      <div class="label">Screen · Hacker (in game)</div>
+      <div class="pad">
+        <div class="hk-top"><span>CIPHER-07 · level 1 · 1/3</span><span class="t">02:14</span></div>
+        <div class="log">&gt; accessing node…<br>&gt; handshake complete<br>&gt; tunnel established<br><span class="n">&gt; awaiting operator input_</span></div>
+        <div class="obj">
+          <div class="k">Your objective</div>
+          <h3>Authenticate node</h3>
+          <p>Type the access codeword for Sector 7. Your operator has it — just ask.</p>
+        </div>
+        <div class="inrow"><div class="input"><span class="c">&gt;</span> type the codeword<span style="opacity:.4">|</span></div><button class="send">Send</button></div>
+        <div class="fb">✕ access denied — try again</div>
+      </div>
+    </section>
+
+    <!-- OPERATOR -->
+    <section class="screen">
+      <div class="label">Screen · Operator (in game)</div>
+      <div class="pad">
+        <div class="hk-top" style="margin-bottom:12px"><span style="font-family:var(--mono)">operations manual</span><span style="color:var(--amber);font-family:var(--mono)">doc 1/3</span></div>
+        <div class="man">
+          <div class="mh"><h3>Access Codewords</h3><span class="ref">SECTION 3.2</span></div>
+          <div class="body">
+            <div class="sec"><h4>3.2 — Sector codewords</h4><p>Every sector has a single-word access codeword. Sectors 1–6 are on the previous page.</p><span class="redir">→ For Sector 7, see note 3.2-b</span></div>
+            <div class="sec"><h4>Note 3.2-b</h4><p>Sector 7 was re-keyed last quarter. The current codeword is <span class="ans">THISTLE</span> — all caps, no spaces.</p></div>
+            <div class="note">⚠ Reminder: never feed the server after midnight.</div>
+          </div>
+        </div>
+        <div class="cant">you can't touch the terminal · guide by voice</div>
+      </div>
+    </section>
+
+    <!-- COMPLETE -->
+    <section class="screen done">
+      <div class="label">Screen · Mission complete</div>
+      <div class="inner">
+        <div><h2>ACCESS GRANTED</h2><div class="sub">You &amp; Béatrice breached the node.</div></div>
+        <div style="text-align:center"><div class="l">completion time</div><div class="t">06:24</div></div>
+        <div class="acts"><button class="btn">Play again</button><button class="btn ghost">New room</button><button class="btn ghost">Copy result link</button></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+</body>
+</html>

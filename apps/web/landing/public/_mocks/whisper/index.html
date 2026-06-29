@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Whispering Hacker — DA mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=Space+Mono&display=swap" rel="stylesheet" />
+<style>
+  :root{--bg:#0b0f14;--panel:#141b22;--line:#26313b;--ink:#eaf1f7;--mut:#94a6b6;--acc:#6df0a3;
+    --disp:"Bricolage Grotesque",sans-serif;--sans:"Hanken Grotesk",sans-serif;--mono:"Space Mono",monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.5}
+  .wrap{max-width:1000px;margin:0 auto;padding:54px 24px 90px}
+  h1{font-family:var(--disp);font-weight:800;font-size:clamp(30px,5vw,46px);margin:0 0 6px;letter-spacing:-.02em}
+  .sub{color:var(--mut);max-width:600px;margin:0 0 8px;font-size:15px}
+  .meta{font-family:var(--mono);font-size:12px;color:var(--acc);margin-bottom:34px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}
+  a.card{display:block;text-decoration:none;color:inherit;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:transform .15s,border-color .15s}
+  a.card:hover{transform:translateY(-4px);border-color:var(--acc)}
+  .swatch{height:96px;display:flex}
+  .swatch span{flex:1}
+  .c-body{padding:16px 17px 18px}
+  .tag{font-family:var(--mono);font-size:11px;color:var(--mut);letter-spacing:.1em}
+  .c-body h2{font-family:var(--disp);font-weight:700;font-size:21px;margin:5px 0 7px;letter-spacing:-.01em}
+  .c-body p{margin:0;color:var(--mut);font-size:13.5px;line-height:1.5}
+  .go{margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--acc)}
+  .foot{margin-top:34px;font-size:13px;color:var(--mut);font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Whispering Hacker — art directions</h1>
+  <p class="sub">Four directions for a much friendlier, far more legible interface. Click any one to see its lobby, hacker screen, operator manual and win screen. They're combinable.</p>
+  <div class="meta">// E is the current reference (your screenshot). A–D are the earlier options.</div>
+
+  <div class="cards">
+    <a class="card" href="./j-player1-v5.html" style="grid-column:1/-1;border-color:#f8d066">
+      <div class="swatch"><span style="background:#08090a;flex:3"></span><span style="background:#f8d066"></span><span style="background:#30a46c"></span><span style="background:#ef5b54"></span></div>
+      <div class="c-body"><div class="tag" style="color:#f8d066">DA · J &nbsp;▶ latest · full screen</div><h2>Player 1 — v5 (full-screen dashboard)</h2><p>Now a real full-screen dashboard: no debug banner, no FORCE TIMEOUT. Watch a tab's timer hit 0 to see the scoped reseed. Solo-test via the off-by-default "practice" toggle (bottom bar).</p><div class="go">open ▸</div></div>
+    </a>
+    <a class="card" href="./i-player1-v4.html" style="grid-column:1/-1;border-color:#f8d066">
+      <div class="swatch"><span style="background:#08090a;flex:3"></span><span style="background:#f8d066"></span><span style="background:#30a46c"></span><span style="background:#ef5b54"></span></div>
+      <div class="c-body"><div class="tag" style="color:#f8d066">DA · I &nbsp;▶ latest</div><h2>Player 1 — v4 (+ Coordinate Lookup)</h2><p>Adds the NODE LOCK coordinate-lookup task: 5×5 grid + a color/shape target, operator reads the protocol DB (color → shape → cell). Plus everything from v3 (per-task timers, scoped reseed).</p><div class="go">play ▸</div></div>
+    </a>
+    <a class="card" href="./h-player1-v3.html" style="grid-column:1/-1;border-color:#f8d066">
+      <div class="swatch"><span style="background:#08090a;flex:3"></span><span style="background:#f8d066"></span><span style="background:#4ec46a"></span><span style="background:#ef5b54"></span></div>
+      <div class="c-body"><div class="tag" style="color:#f8d066">DA · H &nbsp;▶ latest</div><h2>Player 1 — v3 (per-task timers, scoped reseed)</h2><p>Different timer per task; on timeout only THAT encart shakes + shows connection lost/regenerating; clearer reseed UI (↻); no more bar in the body. The current best take.</p><div class="go">play ▸</div></div>
+    </a>
+    <a class="card" href="./g-player1-v2.html" style="grid-column:1/-1;border-color:#f8d066">
+      <div class="swatch"><span style="background:#08090a;flex:3"></span><span style="background:#f8d066"></span><span style="background:#4ec46a"></span><span style="background:#ef5b54"></span></div>
+      <div class="c-body"><div class="tag" style="color:#f8d066">DA · G &nbsp;▶ latest</div><h2>Player 1 — v2 (segmented code, glitch, visual timers)</h2><p>Shape–color–symbol code, glitchy "connection lost" reseed, draining countdown bars + screen destabilising near 0, harsher copy. The current best take on P1.</p><div class="go">play ▸</div></div>
+    </a>
+    <a class="card" href="./f-player1-live.html" style="grid-column:1/-1;border-color:#4ec46a">
+      <div class="swatch"><span style="background:#08090a;flex:3"></span><span style="background:#e9ba4c"></span><span style="background:#4ec46a"></span><span style="background:#ef5b54"></span></div>
+      <div class="c-body"><div class="tag" style="color:#4ec46a">DA · F &nbsp;▶ interactive</div><h2>Player 1 — live mock</h2><p>The Secure HUD, playable. Real per-task countdowns, the "Connection lost → Regenerating" reroll, clickable tabs, level chrono. Solve solo with the demo hints. This is the one to feel.</p><div class="go">play ▸</div></div>
+    </a>
+    <a class="card" href="./e-secure-hud.html" style="grid-column:1/-1;border-color:#e9ba4c">
+      <div class="swatch"><span style="background:#08090a;flex:3"></span><span style="background:#e9ba4c"></span><span style="background:#4ec46a"></span><span style="background:#ef5b54"></span></div>
+      <div class="c-body"><div class="tag" style="color:#e9ba4c">DA · E &nbsp;★ reference</div><h2>Secure HUD — P1 tabs + P2 PDF</h2><p>Your screenshot's black/amber secure console, with 3 puzzle tabs per level for the hacker, and a dead-simple "open the PDF" screen for the operator. Includes a sample manual page.</p><div class="go">open ▸</div></div>
+    </a>
+    <a class="card" href="./a-mission-control.html">
+      <div class="swatch"><span style="background:#0c1322"></span><span style="background:#3fe3ff"></span><span style="background:#ffb24e"></span><span style="background:#131e31"></span></div>
+      <div class="c-body"><div class="tag">DA · A</div><h2>Mission Control</h2><p>Friendly ops console. Color-coded roles, rounded cards, plain language, big tap targets. Warmest &amp; most beginner-proof.</p><div class="go">open ▸</div></div>
+    </a>
+    <a class="card" href="./b-manual-vs-console.html">
+      <div class="swatch"><span style="background:#0a0e0d"></span><span style="background:#6df0a3"></span><span style="background:#f2e8cf"></span><span style="background:#b23a2a"></span></div>
+      <div class="c-body"><div class="tag">DA · B</div><h2>Manual vs Console</h2><p>Printed paper dossier for the operator, crisp dark console for the hacker. The analog↔digital clash is the joke. Very legible.</p><div class="go">open ▸</div></div>
+    </a>
+    <a class="card" href="./c-neon-toy.html">
+      <div class="swatch"><span style="background:#f5efdf"></span><span style="background:#c9f23e"></span><span style="background:#2f5bff"></span><span style="background:#16130d"></span></div>
+      <div class="c-body"><div class="tag">DA · C</div><h2>Neon Toy</h2><p>Loud neo-brutalism: thick borders, hard shadows, huge type, sticker badges. Party-game energy, MSCHF lane.</p><div class="go">open ▸</div></div>
+    </a>
+    <a class="card" href="./d-friendly-terminal.html">
+      <div class="swatch"><span style="background:#14181b"></span><span style="background:#5ef08f"></span><span style="background:#ffc266"></span><span style="background:#1d242a"></span></div>
+      <div class="c-body"><div class="tag">DA · D</div><h2>Friendly Terminal</h2><p>Keep the terminal soul, make it human: warm charcoal, brighter type, sentence case, no scanline mud. Lowest-risk.</p><div class="go">open ▸</div></div>
+    </a>
+  </div>
+
+  <p class="foot">mockups only · not wired into the app · deleted once you pick a direction</p>
+</div>
+</body>
+</html>

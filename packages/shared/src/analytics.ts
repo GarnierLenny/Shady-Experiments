@@ -5,7 +5,7 @@
  */
 
 /** Which app/experiment an event belongs to. Add experiments here as you ship them. */
-export type AnalyticsApp = 'landing' | 'standoff';
+export type AnalyticsApp = 'landing' | 'standoff' | 'whisperinghacker';
 
 /** Payload the browser sends to `POST /api/events` (one event, or an array). */
 export interface TrackEventInput {

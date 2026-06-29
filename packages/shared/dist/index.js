@@ -19,3 +19,6 @@ __exportStar(require("./events"), exports);
 __exportStar(require("./analytics"), exports);
 __exportStar(require("./lobby-id"), exports);
 __exportStar(require("./result-id"), exports);
+__exportStar(require("./whisper"), exports);
+__exportStar(require("./whisper-content"), exports);
+__exportStar(require("./whisper-id"), exports);

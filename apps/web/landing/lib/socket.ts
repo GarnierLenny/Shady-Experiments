@@ -11,7 +11,7 @@ export type DuelSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
  * default to the same host the page was served from on :3002 - so opening the
  * app from another machine on the LAN "just works" without any config.
  */
-function socketUrl(): string {
+export function socketUrl(): string {
   if (process.env.NEXT_PUBLIC_SOCKET_URL) return process.env.NEXT_PUBLIC_SOCKET_URL;
   if (typeof window !== 'undefined') {
     return `${window.location.protocol}//${window.location.hostname}:3002`;
